@@ -1,2 +1,2 @@
-# KONG
+# Kong
 Koncurrent place squasher
