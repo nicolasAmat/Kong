@@ -28,3 +28,48 @@ __version__ = "1.0.0"
 
 from pt import PetriNet
 from e_abstraction import System, Relation
+
+import argparse
+import logging as log
+import subprocess
+import tempfile
+
+
+def main():
+    """ Main Function.
+    """
+    parser = argparse.ArgumentParser(description='Koncurrent Places Squasher')
+
+    parser.add_argument('--version',
+                        action='version',
+                        version='%(prog)s 1.0.0',
+                        help="show the version number and exit")
+
+    parser.add_argument('-v', '--verbose',
+                        action='store_true',
+                        help="increase output verbosity")
+
+    parser.add_argument('infile',
+                        metavar='filename',
+                        type=str,
+                        help='input Petri net (.pnml format)')
+
+    parser.add_argument('--timeout',
+                        action='store',
+                        dest='timeout',
+                        type=int,
+                        default=60,
+                        help='a limit on execution time')
+
+    results = parser.parse_args()
+
+    if results.verbose:
+        log.basicConfig(format="%(message)s", level=log.DEBUG)
+    else:
+        log.basicConfig(format="%(message)s")
+
+   
+
+if __name__ == '__main__':
+    main()
+    exit(0)
