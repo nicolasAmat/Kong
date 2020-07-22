@@ -144,7 +144,7 @@ class Relation:
             - Equal Variables.
         """
         text = "> Agglomerations\n"
-        text += '\n'.join(map(str, self.agglomerations))
+        text += '\n'.join(map(str, self.agglomerations)) + '\n'
 
         text += "> Constant Variables\n"
         for pl in self.constant_vars:
@@ -179,8 +179,14 @@ class Relation:
 
             else:
                 # case a = p + a' or a = p + q or p = q + r
-                left.children.append(self.get_variable(eq.right[0]))
-                left.children.append(self.get_variable(eq.right[1]))
+                right_0, right_1 = self.get_variable(eq.right[0]), self.get_variable(eq.right[1])
+                left.children.append(right_0)
+                left.children.append(right_1)
+
+                if not left.additional:
+                    right_0.parent = left
+                    right_1.parent = left
+
                 self.agglomerations.append(left)
 
     def propagate(self):
@@ -217,29 +223,26 @@ class Relation:
                 c_stable = []
                 for pl in var.propagated_places:
                     c_stable.append(pl.id)
+                    if pl.parent:
+                        c_stable.append(pl.parent.id)
                 c_stables.append(c_stable)
 
             # p = q + r
             if not var.additional:
-                c_stables.append([var.id, var.children[0].id])
-                c_stables.append([var.id, var.children[1].id])
+                self.add_c_stable(c_stables, var, var.children[0])
+                self.add_c_stable(c_stables, var, var.children[1])
 
         # constant places and agglomerations (assumption: No dead place)
         for var in self.constant_vars:
             for pl1 in var.propagated_places:
-                for pl2 in self.eq.places:
+                for pl2 in self.system.places:
                     if pl2 not in var.propagated_places:
-                        c_stables.append([pl1.id, pl2])
+                        self.add_c_stable(c_stables, pl1, self.get_variable(pl2))
 
         # equals variables
         for (var1, var2) in self.equal_vars:
             if not (var1.additional or var2.additional):
-                c_stables.append([var1.id, var2.id])
-
-            else:
-                for pl1 in var1.propagated_places:
-                    for pl2 in var2.propagated_places:
-                        c_stables.append([pl1.id, pl2.id])
+                self.add_c_stable(c_stables, var1, var2)
 
         return c_stables
 
@@ -254,9 +257,23 @@ class Relation:
 
         for pl1 in var1.propagated_places:
             for pl2 in var2.propagated_places:
-                c_stables.append([pl1.id, pl2.id])
+                self.add_c_stable(c_stables, pl1, pl2)
 
         return c_stables
+
+    def add_c_stable(self, c_stables, pl1, pl2):
+        """
+        """
+        c_stables.append([pl1.id, pl2.id])
+
+        if pl1.parent:
+            c_stables.append([pl1.parent.id, pl2.id])
+
+        if pl2.parent:
+            c_stables.append([pl1.id, pl2.parent.id])
+
+        if pl1.parent and pl2.parent:
+            c_stables.append([pl1.parent.id, pl2.parent.id])
 
 
 class Variable:
@@ -277,10 +294,12 @@ class Variable:
     def __init__(self, id, additional):
         self.id = id
         self.additional = additional
+        
+        self.children = []
+        self.parent = None
 
         self.value = -1
         self.equals = []
-        self.children = []
 
         self.propagated_places = set()
 
@@ -315,13 +334,13 @@ class Variable:
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 3:
-        exit("File missing: ./e_abstraction <path_to_initial_net> <path_to_reduced_net>")
+    if len(sys.argv) < 4:
+        exit("File missing: ./e_abstraction <path_to_initial_net> <path_to_reduced_net> <path_to_equations>")
 
-    pt = PetriNet(sys.argv[1])
-    pt_reduced = PetriNet(sys.argv[2])
+    initial_net = PetriNet(sys.argv[1])
+    reduced_net = PetriNet(sys.argv[2])
 
-    system = System(sys.argv[2], pt.places, pt_reduced.places)
+    system = System(sys.argv[3], initial_net.places, reduced_net.places)
 
     relation = Relation(system)
 
