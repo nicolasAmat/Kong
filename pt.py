@@ -3,7 +3,7 @@
 """
 Petri Net Module
 
-Input file format: .net
+Input file format: .pnml
 Documentation: http://projects.laas.fr/tina//manuals/formats.html
 
 This file is part of Kong.
@@ -25,7 +25,7 @@ __license__ = "GPLv3"
 __version__ = "1.0.0"
 
 import sys
-import re
+import xml.etree.ElementTree as ET
 
 
 class PetriNet:
@@ -36,66 +36,31 @@ class PetriNet:
     def __init__(self, filename):
         """ Initializer.
         """
-        self.places = set()
-        self.ordered_places = []
+        self.places = []
+        self.order_places = {}
+        self.number_places = 0
 
         self.parse_net(filename)
-        self.order_places()
 
     def __str__(self):
         """ Petri Net places to .net format.
         """
-        return ' '.join(self.ordered_places) 
+        return ' '.join(self.places) 
 
     def parse_net(self, filename):
         """ Petri Net parser.
-            Input format: .net
+            Input format: .pnml
         """
-        try:
-            with open(filename, 'r') as fp:
-                for line in fp.readlines():
-                    content = re.split(r'\s+', line.strip())
-                    element = content.pop(0)
-                    if element == "tr":
-                        self.parse_transition(content)
-                    if element == "pl":
-                        self.parse_place(content)
-            fp.close()
-        except FileNotFoundError as e:
-            exit(e)
+        xmlns = "{http://www.pnml.org/version-2009/grammar/pnml}"
 
-    def parse_transition(self, content):
-        """ Transition parser.
-            Input format: .net
-        """
-        content = self.parse_label(content[1:])
-        for pl in content:
-            if pl != '->':
-                self.places.add(pl.replace('{', '').replace('}', ''))
+        tree = ET.parse(filename)
+        root = tree.getroot()
 
-    def parse_place(self, content):
-        """ Place parser.
-            Input format: .net
-        """
-        self.places.add(content.pop(0).replace('{', '').replace('}', ''))
-
-    def parse_label(self, content):
-        """ Label parser.
-            Input format: .net
-        """
-        index = 0
-        if content[index] == ':':
-            label_skipped = content[index + 1][0] != '{'
-            index = 2
-            while not label_skipped:
-                label_skipped = content[index][-1] == '}'
-                index += 1
-        return content[index:]
-
-    def order_places(self):
-        """ Order the places according to an alphanumeric order.
-        """
-        self.ordered_places = sorted(self.places)
+        for place_node in root.iter(xmlns + "place"):
+            place = place_node.find(xmlns + "name/" + xmlns + "text").text
+            self.places.append(place)
+            self.order_places[place] = self.number_places
+            self.number_places += 1
 
 
 if __name__ == "__main__":
