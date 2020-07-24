@@ -69,7 +69,4 @@ if __name__ == "__main__":
         exit("File missing: ./pt.py <path_to_file>")
 
     net = PetriNet(sys.argv[1])
-
-    print("Petri Net")
-    print("---------")
-    print(net)
+    print(net.number_places)
