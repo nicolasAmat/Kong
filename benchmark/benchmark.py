@@ -115,8 +115,11 @@ def main():
                 # Write results to .csv file
                 writer.writerow([model, number_places_1, number_places_2, ratio_places, elapsed_1, elapsed_2, ratio_execution_time, correctness])
 
-                print("-------")
-                print(correctness)
+                if results.verbose:
+                    if correctness:
+                        print("{}: Done".format(model))
+                    else:
+                        print("{}: Failure".format(model))
 
 if __name__=='__main__':
     main()
