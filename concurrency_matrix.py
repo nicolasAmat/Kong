@@ -35,7 +35,7 @@ class ConcurrencyMatrix:
         (based on the 'Change of Basis' method)
     """
 
-    def __init__(self, initial_net, reduced_net, system, matrix_reduced):
+    def __init__(self, initial_net, reduced_net, system, matrix_reduced, place_names):
         """ Initializer.
         """
         self.intial_net = initial_net
@@ -51,7 +51,7 @@ class ConcurrencyMatrix:
         self.relation = Relation(system)
         self.change_basis()
 
-        self.display_matrix()
+        self.display_matrix(place_names)
 
     def fill_matrix_from_str(self, matrix):
         """ Fill matrix from caesar.bdd output.
@@ -105,14 +105,18 @@ class ConcurrencyMatrix:
                     else:
                         self.fill_matrix([var1, var2])
 
-    def display_matrix(self):
+    def display_matrix(self, place_names):
             """ Display concurrency matrix.
                 (with run-length encoding)
             """
-            max_len = max([len(pl) for pl in self.intial_net.places])
+            if place_names:
+                max_len = max([len(pl) for pl in self.intial_net.places])
 
             for pl, line in zip(self.intial_net.places, self.matrix_initial):
-                text = pl + " " * (max_len - len(pl) + 2)
+                if place_names:
+                    text = pl + ' ' * (max_len - len(pl) + 2)
+                else:
+                    text = ''
                 for i in range(len(line)):
                     elem = line[i]
                     if i == 0:

@@ -69,6 +69,10 @@ def main():
                         type=str,
                         help='input Petri net (.pnml format)')
 
+    parser.add_argument('-pl', '--place_names',
+                        action='store_true',
+                        help="display place names")
+
     parser.add_argument('--timeout',
                         action='store',
                         dest='timeout',
@@ -113,7 +117,7 @@ def main():
 
     # Compute concurrency matrix of the reduced net
     matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, system, matrix_reduced)
+    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, system, matrix_reduced, results.place_names)
 
     # Close temporary files
     f_reduced_net.close()
