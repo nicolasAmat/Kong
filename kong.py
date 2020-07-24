@@ -38,6 +38,18 @@ import sys
 import tempfile
 
 
+def transition_rename(filename):
+    """ Rename transitions in a .net file
+        to avoir transitions and places to get equal names.
+    """
+    with open(filename, 'r') as file:
+        filedata = file.read()
+
+    filedata = filedata.replace('tr ', 'tr T_')
+
+    with open(filename, 'w') as file:
+        file.write(filedata)
+
 def main():
     """ Main Function.
     """
@@ -79,6 +91,7 @@ def main():
     # Reduce input net
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
     subprocess.run(["reduce", "-rg,redundant,compact,convert,transitions", "-PNML", results.infile, f_reduced_net.name])
+    transition_rename(f_reduced_net.name)
 
     # Convert reduced net to .pnml format
     f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
