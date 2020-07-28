@@ -45,8 +45,6 @@ class ConcurrencyMatrix:
         self.fill_matrix_from_str(matrix_reduced)
         
         self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.intial_net.number_places)]
-        for i in range(self.intial_net.number_places):
-            self.matrix_initial[i][i] = 1
 
         self.relation = Relation(system)
         self.change_basis()
@@ -57,7 +55,7 @@ class ConcurrencyMatrix:
         """ Fill matrix from caesar.bdd output.
             (with run-length encoding)
         """
-        matrix = matrix.replace('(', '').replace(')', '').split('\n')
+        matrix = matrix.split('\n')
         
         for line in matrix:
             if len(line) == 0:
@@ -65,14 +63,21 @@ class ConcurrencyMatrix:
 
             new_line = []
             past_value = -1
+            parse = False
+            multiplier = ""
 
-            for value in line:
-                value = int(value)
-                if value > 1:
-                    new_line.extend([past_value for _ in range(value - 1)])
+            for value in line:           
+                if value == '(':
+                    parse = True
+                elif value == ')':
+                    new_line.extend([past_value for _ in range(int(multiplier) - 1)])
+                    parse = False
+                    multiplier = ""
+                elif parse:
+                    multiplier += value
                 else:
-                    new_line.append(value)
-                    past_value = value
+                    new_line.append(int(value))
+                    past_value = int(value)
 
             self.matrix_reduced.append(new_line)
                 
