@@ -76,6 +76,7 @@ def main():
             writer.writerow(["Model", "Places number: initial net", "Places number: reduced net", "Places number: ratio", "Execution time: initial net", "Execution time: reduced net", "Execution time: ratio", "Correct"])
         
             for model in models_list.readlines():
+                model = model.strip()
                 model_path = results.models_directory + '/' + model
 
                 # Places number: initial net
