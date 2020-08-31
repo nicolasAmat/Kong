@@ -3,7 +3,7 @@
 """
 Kong: Koncurrent Places Squasher
 
-Input file format: .net
+Input file format: .pnml
 
 This file is part of Kong.
 
@@ -28,7 +28,6 @@ __version__ = "1.0.0"
 
 from concurrency_matrix import ConcurrencyMatrix
 from pt import PetriNet
-from e_abstraction import System, Relation
 
 import argparse
 import logging as log
@@ -38,9 +37,9 @@ import sys
 import tempfile
 
 
-def transition_rename(filename):
+def transition_renamer(filename):
     """ Rename transitions in a .net file
-        to avoir transitions and places to get equal names.
+        to avoid similar names between transitions and places.
     """
     with open(filename, 'r') as file:
         filedata = file.read()
@@ -95,7 +94,7 @@ def main():
     # Reduce input net
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
     subprocess.run(["reduce", "-rg,redundant,compact,convert,transitions", "-PNML", results.infile, f_reduced_net.name])
-    transition_rename(f_reduced_net.name)
+    transition_renamer(f_reduced_net.name)
 
     # Convert reduced net to .pnml format
     f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
@@ -103,9 +102,6 @@ def main():
 
     # Read reduced net
     reduced_net = PetriNet(f_reduced_pnml)
-
-    # Read system of equations linking both nets
-    system = System(f_reduced_net.name, initial_net.places, reduced_net.places) 
 
     # Convert reduced net to .nupn format
     PNML2NUPN = os.getenv('PNML2NUPN')
@@ -117,7 +113,9 @@ def main():
 
     # Compute concurrency matrix of the reduced net
     matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, system, matrix_reduced, results.place_names)
+    
+    # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
+    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, f_reduced_net.name, matrix_reduced, results.place_names)
 
     # Close temporary files
     f_reduced_net.close()
