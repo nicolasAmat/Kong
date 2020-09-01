@@ -28,9 +28,7 @@ __license__ = "GPLv3"
 __version__ = "1.0.0"
 
 from abc import ABC, abstractmethod
-import itertools
 import re
-import sys
 
 class ConcurrencyMatrix:
     """ Concurrency Matrix Computer.
@@ -179,7 +177,7 @@ class System:
                 if content:
                     lines = re.split('\n+', content.group())[1:-1]
                     equations = [re.split(r'\s+', line.partition(' |- ')[2].replace('=', '').replace('+', '').replace('{', '').replace('}', '')) for line in lines]
-                    self.equations += [self.parse_equation(equation) for equation in equations]
+                    self.equations = [self.parse_equation(equation) for equation in equations]
             fp.close()
         except FileNotFoundError as e:
             exit(e)
@@ -206,7 +204,7 @@ class System:
             if left.id in self.places_initial:
                 return Shortcut(left, children, self.reachable_places)
             else:
-                return Agglomeration(left, children, self.reachable_places, self.equations)
+                return Agglomeration(left, children, self.reachable_places)
     
     def parse_matrix(self, matrix_reduced):
         """ Parse the concurrency matrix from the reduced net.
@@ -268,6 +266,7 @@ class Equation(ABC):
         """ Initializer.
         """
         self.reachable_places = reachable_places
+        self.reachability_propagated = False
         self.entropy = 0
 
     @abstractmethod
@@ -333,10 +332,7 @@ class Duplicated(Equation):
         """
         Equation.__init__(self, reachable_places)
         self.places = places
-        self.reachability_propagated = False
      
-        self.additional = places[0].additional or places[1].additional
-
     def __str__(self):
         return "R |- {} = {}".format(self.places[0], self.places[1])
 
@@ -347,25 +343,18 @@ class Duplicated(Equation):
             for i, place in enumerate(self.places):
                 if self.places[i] in self.reachable_places:
                     self.reachable_places.add(self.places[(i + 1) % 2])
-                    if self.additional:
-                        if place.additional:
-                            place.equal.add(self.places[(i + 1) % 2])
-                        else:
-                            self.places[(i + 1) % 2].equal.add(place)
-                    else:
-                        Equation.add_concurrency_relation(self, self.places[0], self.places[1])
+                    Equation.add_concurrency_relation(self, self.places[0], self.places[1])
                     self.reachability_propagated = True
                     new_reachable_place = True
         
-        if not self.additional:
-            new_entropy = sum([len(place.concurrent) for place in self.places])
-            if new_entropy > self.entropy:
-                for i, place in enumerate(self.places):
-                    for var in place.concurrent:
-                        if var != self.places[(i + 1) % 2]:
-                            Equation.add_concurrency_relation(self, self.places[(i + 1) % 2], var)
-                self.entropy = new_entropy
-                return True
+        new_entropy = sum([len(place.concurrent) for place in self.places])
+        if new_entropy > self.entropy:
+            for i, place in enumerate(self.places):
+                for var in place.concurrent:
+                    if var != self.places[(i + 1) % 2]:
+                        Equation.add_concurrency_relation(self, self.places[(i + 1) % 2], var)
+            self.entropy = new_entropy
+            return True
 
         return new_reachable_place
 
@@ -382,7 +371,6 @@ class Shortcut(Equation):
         Equation.__init__(self, reachable_places)
         self.parent = parent
         self.children = children
-        self.reachability_propagated = False
 
     def __str__(self):
         return "R |- {} = {} + {}".format(self.parent, self.children[0], self.children[1])
@@ -416,14 +404,12 @@ class Agglomeration(Equation):
         - 'a = p + q'.
     """
 
-    def __init__(self, parent, children, reachable_places, equations):
+    def __init__(self, parent, children, reachable_places):
         """ Initializer.
         """
         Equation.__init__(self, reachable_places)
         self.parent = parent
         self.children = children
-        self.reachability_propagated = False
-        self.equations = equations
 
     def __str__(self):
         return "A |- {} = {} + {}".format(self.parent, self.children[0], self.children[1])
@@ -443,16 +429,6 @@ class Agglomeration(Equation):
                     self.reachability_propagated = True
                     new_relation = True
 
-        if self.parent.equal:
-            for equal in self.parent.equal:
-                for child in self.children:
-                    if child.additional:
-                        child.equal.add(equal)
-                    else:
-                        self.equations.append(Duplicated([equal, child], self.reachable_places))
-            self.parent.equal = set()
-            new_relation = True
-
         new_entropy = len(self.parent.concurrent)
         if new_entropy > self.entropy:
             for child in self.children:
@@ -470,7 +446,6 @@ class Variable:
     A variable defined by:
     - an identifier,
     - a set of concurrent places,
-    - a set of equal places,
     - a set of independant places.
     """
 
@@ -481,7 +456,6 @@ class Variable:
         self.additional = additional
 
         self.concurrent = set()
-        self.equal = set()
         self.independant = set()
     
     def __str__(self):
