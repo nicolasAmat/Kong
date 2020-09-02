@@ -89,21 +89,26 @@ def main():
         stdout = subprocess.DEVNULL
 
     # Read input net
+    log.info("> Read the input Petri net")
     initial_net = PetriNet(results.infile)
 
     # Reduce input net
+    log.info("> Reduce the input Petri net")
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
     subprocess.run(["reduce", "-rg,redundant,compact,convert,transitions", "-PNML", results.infile, f_reduced_net.name])
     transition_renamer(f_reduced_net.name)
 
     # Convert reduced net to .pnml format
+    log.info("> Convert the reduced Petri net to '.pnml' format")
     f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
     subprocess.run(["ndrio", f_reduced_net.name, f_reduced_pnml.name])
 
     # Read reduced net
+    log.info("> Read the reduced Petri net")
     reduced_net = PetriNet(f_reduced_pnml)
 
     # Convert reduced net to .nupn format
+    log.info("> Convert the reduced Petri net to '.nupn' format")
     PNML2NUPN = os.getenv('PNML2NUPN')
     if not PNML2NUPN:
         f_reduced_net.close()
@@ -112,9 +117,11 @@ def main():
     subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
 
     # Compute concurrency matrix of the reduced net
+    log.info("> Compute the concurrency matrix of the reduced Petri net")
     matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
     
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
+    log.info("> Change of basis")
     concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, f_reduced_net.name, matrix_reduced, results.place_names)
 
     # Close temporary files
