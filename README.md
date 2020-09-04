@@ -1,4 +1,4 @@
-# Kong: Koncurrent Place Squasher
+# Kong: Koncurrent Places Squasher
 
 ## About
 
