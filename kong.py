@@ -26,15 +26,15 @@ __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
 __version__ = "1.0.0"
 
-from concurrency_matrix import ConcurrencyMatrix
-from pt import PetriNet
-
 import argparse
 import logging as log
 import os
 import subprocess
 import sys
 import tempfile
+
+from concurrency_matrix import ConcurrencyMatrix
+from pt import PetriNet
 
 
 def transition_renamer(filename):

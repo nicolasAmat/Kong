@@ -27,12 +27,12 @@ __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
 __version__ = "1.0.0"
 
-from abc import ABC, abstractmethod
 import re
+from abc import ABC, abstractmethod
+
 
 class ConcurrencyMatrix:
-    """ Concurrency Matrix Computer.
-        (based on the 'Change of Basis' method)
+    """ Change of basis of the concurrency matrix.
     """
 
     def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names):
@@ -98,20 +98,20 @@ class ConcurrencyMatrix:
                         counter = 0
                     if i == len(line) - 1:
                         if previous != elem:
-                            text += self.compression_rle(previous, counter)
+                            text += self.rle_compression(previous, counter)
                             text += str(elem)
                         else:
-                            text += self.compression_rle(previous, counter + 1)
+                            text += self.rle_compression(previous, counter + 1)
                     else:
                         if elem != previous:
-                            text += self.compression_rle(previous, counter)
+                            text += self.rle_compression(previous, counter)
                             previous = elem
                             counter = 1
                         else:
                             counter += 1
                 print(text)
 
-    def compression_rle(self, elem, counter):
+    def rle_compression(self, elem, counter):
         """ Run-length encoding helper.
         """
         if counter < 4:
@@ -138,7 +138,6 @@ class System:
         self.init_variables()
 
         self.reachable_places = set()
-        
         self.equations = []
 
         self.parse_system(filename)
@@ -245,12 +244,8 @@ class System:
         for i, pl1 in enumerate(self.places_initial):
             for j, pl2 in enumerate(self.places_initial[:i+1]):
                 var1, var2 = self.get_variable(pl1), self.get_variable(pl2)
-                if i == j:
-                    if var1 in self.reachable_places:
-                        matrix[i][j] = 1
-                else:
-                    if var2 in var1.concurrent:
-                        matrix[i][j] = 1
+                if (i == j and var1 in self.reachable_places) or var2 in var1.concurrent:
+                    matrix[i][j] = 1
 
         return matrix
 
@@ -312,7 +307,7 @@ class Constant(Equation):
         new_entropy = len(self.reachable_places)
         if new_entropy > self.entropy:
             for var in self.reachable_places:
-                if var != self.place:
+                if var != self.place and var not in self.place.concurrent:
                     Equation.add_concurrency_relation(self, self.place, var)
             self.entropy = new_entropy
             return True
@@ -337,7 +332,7 @@ class Duplicated(Equation):
         return "R |- {} = {}".format(self.places[0], self.places[1])
 
     def propagate(self):
-        new_reachable_place = False
+        new_relation = False
         
         if not self.reachability_propagated:
             for i, place in enumerate(self.places):
@@ -345,18 +340,19 @@ class Duplicated(Equation):
                     self.reachable_places.add(self.places[(i + 1) % 2])
                     Equation.add_concurrency_relation(self, self.places[0], self.places[1])
                     self.reachability_propagated = True
-                    new_reachable_place = True
+                    new_relation = True
+                    break
         
         new_entropy = sum([len(place.concurrent) for place in self.places])
         if new_entropy > self.entropy:
             for i, place in enumerate(self.places):
                 for var in place.concurrent:
-                    if var != self.places[(i + 1) % 2]:
+                    if var != self.places[(i + 1) % 2] and var not in self.places[(i + 1) % 2].concurrent:
                         Equation.add_concurrency_relation(self, self.places[(i + 1) % 2], var)
             self.entropy = new_entropy
-            return True
+            new_relation = True
 
-        return new_reachable_place
+        return new_relation
 
 class Shortcut(Equation):
     """ Shorcut between places.
@@ -459,6 +455,6 @@ class Variable:
         self.independant = set()
     
     def __str__(self):
-        """ 
+        """ Variable identifier.
         """
         return self.id
