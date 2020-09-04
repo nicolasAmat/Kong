@@ -108,8 +108,7 @@ def main():
                 elapsed_2 = time.time() - start
 
                 # Ratio execution time
-                ratio_execution_time = elapsed_2 / elapsed_1
-
+                ratio_execution_time = (elapsed_2 - elapsed_1) / elapsed_1
                 # Correctness checking
                 correctness = matrix_1.split("\n") == matrix_2.split("\n")
                 
