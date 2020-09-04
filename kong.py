@@ -72,12 +72,6 @@ def main():
                         action='store_true',
                         help="display place names")
 
-    parser.add_argument('--timeout',
-                        action='store',
-                        dest='timeout',
-                        type=int,
-                        default=60,
-                        help='a limit on execution time')
     results = parser.parse_args()
 
     # Verbose option
