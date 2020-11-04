@@ -32,6 +32,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 from concurrency_matrix import ConcurrencyMatrix
 from pt import PetriNet
@@ -72,6 +73,10 @@ def main():
                         action='store_true',
                         help="display place names")
 
+    parser.add_argument('-t', '--time',
+                        action='store_true',
+                        help="show computation time")
+
     results = parser.parse_args()
 
     # Verbose option
@@ -101,6 +106,8 @@ def main():
     log.info("> Read the reduced Petri net")
     reduced_net = PetriNet(f_reduced_pnml)
 
+    start_time = time.time()
+
     if reduced_net.places:
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
@@ -111,6 +118,8 @@ def main():
             sys.exit("Environment variable PNML2NUPN not defined!")
         subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
 
+        start_time = time.time()
+
         # Compute concurrency matrix of the reduced net
         log.info("> Compute the concurrency matrix of the reduced Petri net")
         matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
@@ -120,6 +129,10 @@ def main():
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
     concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, f_reduced_net.name, matrix_reduced, results.place_names)
+
+    # Show computation time
+    if results.time:
+        print("> Computation time:", time.time() - start_time)
 
     # Close temporary files
     f_reduced_net.close()
