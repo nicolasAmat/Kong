@@ -101,19 +101,22 @@ def main():
     log.info("> Read the reduced Petri net")
     reduced_net = PetriNet(f_reduced_pnml)
 
-    # Convert reduced net to .nupn format
-    log.info("> Convert the reduced Petri net to '.nupn' format")
-    PNML2NUPN = os.getenv('PNML2NUPN')
-    if not PNML2NUPN:
-        f_reduced_net.close()
-        f_reduced_pnml.close()
-        sys.exit("Environment variable PNML2NUPN not defined!")
-    subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
+    if reduced_net.places:
+        # Convert reduced net to .nupn format
+        log.info("> Convert the reduced Petri net to '.nupn' format")
+        PNML2NUPN = os.getenv('PNML2NUPN')
+        if not PNML2NUPN:
+            f_reduced_net.close()
+            f_reduced_pnml.close()
+            sys.exit("Environment variable PNML2NUPN not defined!")
+        subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
 
-    # Compute concurrency matrix of the reduced net
-    log.info("> Compute the concurrency matrix of the reduced Petri net")
-    matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
-    
+        # Compute concurrency matrix of the reduced net
+        log.info("> Compute the concurrency matrix of the reduced Petri net")
+        matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
+    else:
+        matrix_reduced = ''
+
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
     concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, f_reduced_net.name, matrix_reduced, results.place_names)
