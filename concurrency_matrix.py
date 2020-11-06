@@ -4,7 +4,7 @@
 Concurrency Matrix Module
 
 Input file format: caesar.bdd format (half matrix with run-lenght encoding),
-                   `reduced` output format (.net)
+                   `reduced` output format (.net).
 
 This file is part of Kong.
 
@@ -138,6 +138,8 @@ class System:
         self.init_variables()
 
         self.reachable_places = set()
+        
+        self.constants = []
         self.equations = []
 
         self.parse_system(filename)
@@ -176,7 +178,16 @@ class System:
                 if content:
                     lines = re.split('\n+', content.group())[1:-1]
                     equations = [re.split(r'\s+', line.partition(' |- ')[2].replace('=', '').replace('+', '').replace('{', '').replace('}', '')) for line in lines]
-                    self.equations = [self.parse_equation(equation) for equation in equations]
+
+                    for equation in reversed(equations): # Read with a reversed order for agglomerations
+                        equation = self.parse_equation(equation)
+                        
+                        # Treat constant places sepearately
+                        if isinstance(equation, Constant) and not equation.place.additional:
+                            self.constants.append(equation)
+                        else:
+                            self.equations.append(equation)
+
             fp.close()
         except FileNotFoundError as e:
             exit(e)
@@ -219,23 +230,6 @@ class System:
                     else:
                         self.reachable_places.add(var1)
 
-    def change_of_basis(self):
-        """ Change of Basis method.
-
-            Compute the concurrency matrix of the initial net
-            from the concurrency relation of the reduced net
-            and the system of equation linking both nets.
-        """
-        new_relation = True
-        
-        while new_relation:
-            new_relation = False
-            for equation in self.equations:
-                if equation.propagate():
-                    new_relation = True
-
-        return self.get_matrix()
-
     def get_matrix(self):
         """ Get concurrency matrix from the initial net (after a change of basis).
         """
@@ -249,6 +243,28 @@ class System:
 
         return matrix
 
+    def change_of_basis(self):
+        """ Change of Basis method.
+
+            Compute the concurrency matrix of the initial net
+            from the concurrency relation of the reduced net
+            and the system of equation linking both nets.
+        """
+        self.reachable_places.union(set([constant.place for constant in self.constants]))
+
+        new_relation = True
+        
+        while new_relation:
+            new_relation = False
+            for equation in self.equations:
+                if equation.propagate():
+                    new_relation = True
+
+        for constant in self.constants:
+            constant.propagate()
+
+        return self.get_matrix()
+
 
 class Equation(ABC):
     """ Reduction equation meta-class.
@@ -260,9 +276,10 @@ class Equation(ABC):
     def __init__(self, reachable_places):
         """ Initializer.
         """
+        self.cc = 0
+        
         self.reachable_places = reachable_places
         self.reachability_propagated = False
-        self.entropy = 0
 
     @abstractmethod
     def __str__(self):
@@ -304,12 +321,12 @@ class Constant(Equation):
         return "R |- {} = 1".format(self.place)
 
     def propagate(self):
-        new_entropy = len(self.reachable_places)
-        if new_entropy > self.entropy:
+        new_cc = len(self.reachable_places)
+        if new_cc > self.cc:
             for var in self.reachable_places:
                 if var != self.place and var not in self.place.concurrent:
                     Equation.add_concurrency_relation(self, self.place, var)
-            self.entropy = new_entropy
+            self.cc = new_cc
             return True
         return False
 
@@ -342,14 +359,14 @@ class Duplicated(Equation):
                     self.reachability_propagated = True
                     new_relation = True
                     break
-        
-        new_entropy = sum([len(place.concurrent) for place in self.places])
-        if new_entropy > self.entropy:
+
+        new_cc = sum([len(place.concurrent) for place in self.places])
+        if new_cc > self.cc:
             for i, place in enumerate(self.places):
                 for var in place.concurrent:
                     if var != self.places[(i + 1) % 2] and var not in self.places[(i + 1) % 2].concurrent:
                         Equation.add_concurrency_relation(self, self.places[(i + 1) % 2], var)
-            self.entropy = new_entropy
+            self.cc = new_cc
             new_relation = True
 
         return new_relation
@@ -383,10 +400,11 @@ class Shortcut(Equation):
                     self.reachability_propagated = True
 
         union = self.children[0].concurrent | self.children[1].concurrent
-        new_entropy = len(union)
-        if new_entropy > self.entropy:
-            self.parent.concurrent |= union
-            self.entropy = new_entropy
+        new_cc = len(union)
+        if new_cc > self.cc:
+            for var in union:
+                Equation.add_concurrency_relation(self, self.parent, var)
+            self.cc = new_cc
             new_relation = True
 
         return new_relation
@@ -425,12 +443,12 @@ class Agglomeration(Equation):
                     self.reachability_propagated = True
                     new_relation = True
 
-        new_entropy = len(self.parent.concurrent)
-        if new_entropy > self.entropy:
+        new_cc = len(self.parent.concurrent)
+        if new_cc > self.cc:
             for child in self.children:
                 for var in self.parent.concurrent.copy():
                     Equation.add_concurrency_relation(self, child, var)
-            self.entropy = new_entropy
+            self.cc = new_cc
             new_relation = True
 
         return new_relation
