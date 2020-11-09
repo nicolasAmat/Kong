@@ -35,7 +35,7 @@ class ConcurrencyMatrix:
     """ Change of basis of the concurrency matrix.
     """
 
-    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names):
+    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False, dag=False):
         """ Initializer.
         """
         self.initial_net = initial_net

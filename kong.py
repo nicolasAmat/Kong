@@ -67,7 +67,11 @@ def main():
     parser.add_argument('infile',
                         metavar='filename',
                         type=str,
-                        help='input Petri net (.pnml format)')
+                        help="input Petri net (.pnml format)")
+
+    parser.add_argument('-dag',
+                        action='store_true',
+                        help="use directed acyclic graph instead of fixed point")
 
     parser.add_argument('-pl', '--place_names',
                         action='store_true',
@@ -128,7 +132,7 @@ def main():
 
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
-    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, f_reduced_net.name, matrix_reduced, results.place_names)
+    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, f_reduced_net.name, matrix_reduced, results.place_names, results.dag)
 
     # Show computation time
     if results.time:
