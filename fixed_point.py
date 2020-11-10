@@ -30,10 +30,7 @@ from abc import ABC, abstractmethod
 
 class FixedPoint:
     """
-    Equation system defined by:
-    - a set of places from the initial Petri Net,
-    - a set of places from the reduced Petri Net,
-    - a set of (in)equations.
+    Fixed point method.
     """
 
     def __init__(self, filename, places_initial, places_reduced, matrix_reduced=[]):
@@ -85,7 +82,7 @@ class FixedPoint:
                 content = re.search(r'# generated equations\n(.*)?\n\n', fp.read(), re.DOTALL)
                 if content:
                     lines = re.split('\n+', content.group())[1:-1]
-                    equations = [re.split(r'\s+', line.partition(' |- ')[2].replace('=', '').replace('+', '').replace('{', '').replace('}', '')) for line in lines]
+                    equations = [re.split(r'\s+', line.partition(' |- ')[2].replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', '')) for line in lines]
 
                     for equation in reversed(equations): # Read with a reversed order for agglomerations
                         equation = self.parse_equation(equation)
@@ -138,19 +135,6 @@ class FixedPoint:
                     else:
                         self.reachable_places.add(var1)
 
-    def get_matrix(self):
-        """ Get concurrency matrix from the initial net (after a change of basis).
-        """
-        matrix = [[0 for j in range(i + 1)] for i in range(len(self.places_initial))]
-
-        for i, pl1 in enumerate(self.places_initial):
-            for j, pl2 in enumerate(self.places_initial[:i+1]):
-                var1, var2 = self.get_variable(pl1), self.get_variable(pl2)
-                if (i == j and var1 in self.reachable_places) or var2 in var1.concurrent:
-                    matrix[i][j] = 1
-
-        return matrix
-
     def change_of_basis(self):
         """ Change of Basis method.
 
@@ -172,6 +156,19 @@ class FixedPoint:
             constant.propagate()
 
         return self.get_matrix()
+
+    def get_matrix(self):
+        """ Get concurrency matrix from the initial net (after a change of basis).
+        """
+        matrix = [[0 for j in range(i + 1)] for i in range(len(self.places_initial))]
+
+        for i, pl1 in enumerate(self.places_initial):
+            for j, pl2 in enumerate(self.places_initial[:i+1]):
+                var1, var2 = self.get_variable(pl1), self.get_variable(pl2)
+                if (i == j and var1 in self.reachable_places) or var2 in var1.concurrent:
+                    matrix[i][j] = 1
+
+        return matrix
 
 
 class Equation(ABC):
