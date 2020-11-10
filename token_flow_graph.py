@@ -76,7 +76,7 @@ class TFG:
                 content = re.search(r'# generated equations\n(.*)?\n\n', fp.read(), re.DOTALL)
                 if content:
                     for line in re.split('\n+', content.group())[1:-1]:
-                        equation = re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('=', '').replace('+', '').replace('{', '').replace('}', ''))
+                        equation = re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', ''))
                         self.parse_equation(equation)
 
             fp.close()
