@@ -27,7 +27,7 @@ __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
 __version__ = "1.0.0"
 
-from dag import DAG
+from token_flow_graph import TFG
 from fixed_point import FixedPoint
 
 
@@ -47,7 +47,7 @@ class ConcurrencyMatrix:
 
         # Select method
         if dag:
-            self.method = DAG(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
+            self.method = TFG(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
         else:
             self.method = FixedPoint(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
         
