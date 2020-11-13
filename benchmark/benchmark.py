@@ -1,33 +1,14 @@
 #!/usr/bin/env python3
 
 """
-Benchmarking Script
-
-This file is part of Kong.
-
-Kong is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-Kong is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with Kong. If not, see <https://www.gnu.org/licenses/>.
+Benchmark script
 """
-
-__author__ = "Nicolas AMAT, LAAS-CNRS"
-__contact__ = "namat@laas.fr"
-__license__ = "GPLv3"
-__version__ = "1.0.0"
 
 import argparse
 import csv
 import os
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -67,20 +48,36 @@ def main():
                         metavar='directory',
                         type=str,
                         help='path to the models directory')
+
+    parser.add_argument('-o', '--output',
+                        action='store',
+                        dest='output_file',
+                        type=str,
+                        default='results.csv',
+                        help='path to output file (.csv format)')
+
     results = parser.parse_args()
 
+    # Exit if PNML2NUPN not defined
+    PNML2NUPN = os.getenv('PNML2NUPN')
+    if not PNML2NUPN:
+        sys.exit("Environment variable PNML2NUPN not defined!")
+
     with open(results.models_list, 'r') as models_list:
-        with open('results.csv', 'w', newline='') as csvfile:
+        with open(results.output_file, 'w', newline='') as csvfile:
 
             writer = csv.writer(csvfile)    
-            writer.writerow(["Model", "Places number: initial net", "Places number: reduced net", "Places number: ratio", "Execution time: initial net", "Execution time: reduced net", "Execution time: ratio", "Correct"])
+            writer.writerow(["Model", "Places number: initial net", "Places number: reduced net", "Places number: ratio", "Execution time: with reduction", "Execution time: without reduction", "Execution time: gain", "Correctness"])
         
             for model in models_list.readlines():
                 model = model.strip()
+                if model == '':
+                    break
+
                 model_path = results.models_directory + '/' + model
 
                 # Places number: initial net
-                number_places_1 = int(subprocess.run(["../pt.py", model_path], stdout=subprocess.PIPE).stdout.decode('utf-8').strip())
+                number_places_initial = int(subprocess.run(["../pt.py", model_path], stdout=subprocess.PIPE).stdout.decode('utf-8').strip())
                
                 # Places number: reduced net
                 f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
@@ -88,32 +85,32 @@ def main():
                 transition_rename(f_reduced_net.name)
                 f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
                 subprocess.run(["ndrio", f_reduced_net.name, f_reduced_pnml.name])
-                number_places_2 = int(subprocess.run(["../pt.py", f_reduced_pnml.name], stdout=subprocess.PIPE).stdout.decode('utf-8').strip())
+                number_places_reduced = int(subprocess.run(["../pt.py", f_reduced_pnml.name], stdout=subprocess.PIPE).stdout.decode('utf-8').strip())
                 f_reduced_net.close()
                 f_reduced_pnml.close()
 
                 # Ratio places
-                ratio_places = number_places_2 / number_places_1
+                ratio_places = (1 - number_places_reduced / number_places_initial) * 100
 
                 # Run caesar.bdd (oracle)
-                PNML2NUPN = os.getenv('PNML2NUPN')
                 subprocess.run(["java", "-jar", PNML2NUPN, model_path], stdout=subprocess.DEVNULL)
                 start = time.time()
-                matrix_1 = subprocess.run(["caesar.bdd", "-concurrent-places", model_path.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
-                elapsed_1 = time.time() - start
+                matrix_oracle = subprocess.run(["caesar.bdd", "-concurrent-places", model_path.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8').split('\n')
+                computation_time_oracle = time.time() - start
                 
                 # Run Kong
-                start = time.time()
-                matrix_2 = subprocess.run(["../kong.py", model_path], stdout=subprocess.PIPE).stdout.decode('utf-8')
-                elapsed_2 = time.time() - start
+                kong_output = subprocess.run(["../kong.py", '--time', model_path], stdout=subprocess.PIPE).stdout.decode('utf-8')
+                matrix_kong = kong_output.split('\n')
+                computation_time_kong = float(matrix_kong.pop(-2).split(': ')[1])
 
                 # Ratio execution time
-                ratio_execution_time = (elapsed_2 - elapsed_1) / elapsed_1
+                ratio_execution_time = (1 - computation_time_kong / computation_time_oracle) * 100
+                
                 # Correctness checking
-                correctness = matrix_1.split("\n") == matrix_2.split("\n")
+                correctness = matrix_oracle == matrix_kong
                 
                 # Write results to .csv file
-                writer.writerow([model, number_places_1, number_places_2, ratio_places, elapsed_1, elapsed_2, ratio_execution_time, correctness])
+                writer.writerow([model, number_places_initial, number_places_reduced, ratio_places, computation_time_oracle, computation_time_kong, ratio_execution_time, correctness])
 
                 if results.verbose:
                     if correctness:
