@@ -28,14 +28,13 @@ __license__ = "GPLv3"
 __version__ = "1.0.0"
 
 from token_flow_graph import TFG
-from fixed_point import FixedPoint
 
 
 class ConcurrencyMatrix:
     """ Change of basis of the concurrency matrix.
     """
 
-    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False, dag=False):
+    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False):
         """ Initializer.
         """
         self.initial_net = initial_net
@@ -45,13 +44,8 @@ class ConcurrencyMatrix:
         self.matrix_reduced = []
         self.fill_matrix_from_str(matrix_reduced)
 
-        # Select method
-        if dag:
-            self.method = TFG(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
-        else:
-            self.method = FixedPoint(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
-        
-        # Get and display the initial Petri net concurrency matrix
+        # Compute and display the initial Petri net concurrency matrix
+        self.method = TFG(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
         self.matrix_initial = self.method.change_of_basis()
         self.display_matrix(place_names)
 
