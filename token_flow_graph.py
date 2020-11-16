@@ -155,12 +155,12 @@ class TFG:
 
         if var.redundant:
             # If redundant, learn new concurrency relations
-            for child in var.agglomerated:
-                leafs += self.token_propagation(child, get_leafs=True)
+            for agglomeration in var.agglomerated:
+                leafs += self.token_propagation(agglomeration, get_leafs=True)
         
-            for child in var.redundant:
-                new_leafs = self.token_propagation(child, get_leafs=True)
-                self.product(leafs, new_leafs)
+            for redundant in var.redundant:
+                new_leafs = self.token_propagation(redundant, get_leafs=True)
+                self.product(new_leafs, leafs)
                 leafs += new_leafs
 
         else:
