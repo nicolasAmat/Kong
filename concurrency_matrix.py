@@ -45,7 +45,7 @@ class ConcurrencyMatrix:
         self.fill_matrix_from_str(matrix_reduced)
 
         # Compute and display the initial Petri net concurrency matrix
-        self.method = TFG(filename_system, self.initial_net.places, self.reduced_net.places, self.matrix_reduced)
+        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.matrix_reduced)
         self.matrix_initial = self.method.change_of_basis()
         self.display_matrix(place_names)
 

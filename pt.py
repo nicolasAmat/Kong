@@ -37,7 +37,7 @@ class PetriNet:
         """ Initializer.
         """
         self.places = []
-        self.order_places = {}
+        self.order = {}
         self.number_places = 0
 
         self.parse_net(filename)
@@ -59,7 +59,7 @@ class PetriNet:
         for place_node in root.iter(xmlns + "place"):
             place = place_node.find(xmlns + "name/" + xmlns + "text").text
             self.places.append(place)
-            self.order_places[place] = self.number_places
+            self.order[place] = self.number_places
             self.number_places += 1
 
 

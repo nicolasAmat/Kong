@@ -27,32 +27,34 @@ __version__ = "1.0.0"
 import itertools
 import re
 
+
 class TFG:
     """
     Token Flow Graph method.
     """
 
-    def __init__(self, filename, places_initial, places_reduced, matrix_reduced=[]):
+    def __init__(self, filename, initial_net, reduced_net, matrix_reduced=[]):
         """ Initializer.
         """
-        self.places_initial = places_initial
-        self.places_reduced = places_reduced
+        self.initial_net = initial_net
+        self.reduced_net = reduced_net
 
         self.variables = {}
-        self.constants = set()
+        self.reachable = set()
         self.init_variables()
 
+        self.constants = set()
         self.parse_system(filename)
 
-        self.matrix_reduced = matrix_reduced
-        self.matrix = [[0 for j in range(i + 1)] for i in range(len(self.places_initial))]
-
         self.leafs = {}
+
+        self.matrix_reduced = matrix_reduced
+        self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.initial_net.number_places)]
 
     def init_variables(self):
         """ Create a Variable for each place from the initial net.
         """
-        for place in self.places_initial:
+        for place in self.initial_net.places:
             self.variables[place] = Variable(place)
 
     def get_variable(self, id_var):
@@ -68,7 +70,6 @@ class TFG:
 
     def parse_system(self, filename):
         """ System of reduction equations parser.
-
             Input format: .net (output of the `reduce` tool)
         """
         try:
@@ -76,8 +77,7 @@ class TFG:
                 content = re.search(r'# generated equations\n(.*)?\n\n', fp.read(), re.DOTALL)
                 if content:
                     for line in re.split('\n+', content.group())[1:-1]:
-                        equation = re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', ''))
-                        self.parse_equation(equation)
+                        self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', '')))
 
             fp.close()
         except FileNotFoundError as e:
@@ -85,27 +85,28 @@ class TFG:
 
     def parse_equation(self, equation):
         """ Equation parser.
-        
             Input format: .net (output of the `reduced` tool)
         """
         kind = equation.pop(0)
 
+        # Constant
         if equation[-1].isnumeric():
             self.constants.add(self.get_variable(equation[0]))
             return
 
-        variables = [self.get_variable(var) for var in equation]
+        variables = [self.get_variable(id_var) for id_var in equation]
 
+        # Redundant (Duplicated or Shortcut)
         if kind == 'R':
             removed_place = variables.pop(0)
             for var in variables:
                 var.redundant.append(removed_place)
             return
 
+        # Agglomeration
         if kind == 'A':
             new_place = variables.pop(0)
-            for var in variables:
-                new_place.agglomerated.append(var)
+            new_place.agglomerated += variables
             return
 
         raise ValueError("Invalid reduction equation")
@@ -113,113 +114,88 @@ class TFG:
     def change_of_basis(self):
         """ Change of Basis method.
         """
+        # Propagate constant variables
         for var in self.constants:
-            self.propagation(var, get_leafs=True, memoize=True)
+            self.token_propagation(var, get_leafs=True, memoize=True)
 
-        for i in range(len(self.matrix_reduced)):
+        # Propagate reachable roots
+        for i in range(self.reduced_net.number_places):
             if self.matrix_reduced[i][i]:
-                self.propagation(self.get_variable(self.places_reduced[i]), get_leafs=True, memoize=True)
- 
+                var = self.get_variable(self.reduced_net.places[i])
+                self.token_propagation(var, get_leafs=True, memoize=True)
+
+        # Add concurrency relations from reduced matrix
         for i, line in enumerate(self.matrix_reduced):
             for j, concurrency in enumerate(line[:-1]):
                 if concurrency:
-                    var1 = self.get_variable(self.places_reduced[i])
-                    var2 = self.get_variable(self.places_reduced[j])
+                    var1, var2 = self.get_variable(self.reduced_net.places[i]), self.get_variable(self.reduced_net.places[j])
                     self.product(self.leafs[var1], self.leafs[var2])
 
-        non_dead = {var for var in self.variables.values() if not var.additional and var.reachable}
-
+        # Add concurrency relations for constant variables
         for var in self.constants:
-            self.product(self.leafs[var], non_dead - set(self.leafs[var]))
+            self.product(self.leafs[var], self.reachable - set(self.leafs[var]))
 
-        return self.get_matrix()
+        return self.matrix_initial
 
-    def propagation(self, var, get_leafs=False, memoize=False):
-        """ Token propagation.
+    def token_propagation(self, var, get_leafs=False, memoize=False):
+        """ Token propagation:
+            - learn concurrency relations,
+            - memoize leafs.
         """
-        # Variable is reachable
-        var.reachable = True
+        # Initialization
+        leafs = []
 
-        leafs, concurrency, concurrency_red = [], False, False
-
-        # Product of the leafs if two redundances or one redundance + one agglomeration
-        if len(var.redundant) > 1 or (var.agglomerated and var.redundant):
-            get_leafs, concurrency = True, True
-
-        if not var.additional and var.redundant:
-            get_leafs, concurrency_red = True, True
-
-        # Propagate children
-        if concurrency:
-            agg_leafs = []
-            for child in var.agglomerated:
-                agg_leafs += self.propagation(child, get_leafs)
-                leafs += agg_leafs
-        
-            red_leafs = []
-            for child in var.redundant:
-                red_leafs.append(self.propagation(child, get_leafs))
-
-            if len(red_leafs) == 2:
-                self.product(red_leafs[0], red_leafs[1])
-        
-            for red in red_leafs:
-                self.product(agg_leafs, red)
-                leafs += red
-        
-        if concurrency_red:
-            red_leafs = []
-            for child in var.redundant:
-                red_leafs.append(self.propagation(child, get_leafs))
-
-            for red in red_leafs:
-                self.product([var], red)
-                leafs += red
-
-        if not concurrency and not concurrency_red:
-            for child in var.agglomerated + var.redundant:
-                leafs += self.propagation(child, get_leafs)
-
-        # A leaf is a place from the initial net
+        # If place from the initial net, add to reachable
         if not var.additional:
+            self.reachable.add(var)
+            order = self.initial_net.order[var.id]
+            self.matrix_initial[order][order] = 1
+            # A leaf is a place from the initial net
             leafs.append(var)
 
+        if var.redundant:
+            # If redundant, learn new concurrency relations
+            for child in var.agglomerated:
+                leafs += self.token_propagation(child, get_leafs=True)
+        
+            for child in var.redundant:
+                new_leafs = self.token_propagation(child, get_leafs=True)
+                self.product(leafs, new_leafs)
+                leafs += new_leafs
+
+        else:
+            # Otherwise, continue propagation
+            for child in var.agglomerated + var.redundant:
+                leafs += self.token_propagation(child, get_leafs=get_leafs)
+
+        # Leafs memoization
         if memoize:
             self.leafs[var] = leafs
 
+        # Return leafs
         if get_leafs:
             return leafs
         else:
             return []
 
     def product(self, places_1, places_2):
-        """
+        """ Add the cartesian product between two sets to the concurrent relation.
         """
         for place_1, place_2 in itertools.product(places_1, places_2):
-            # TODO: matrix directly
-            place_1.concurrent.add(place_2)
-            place_2.concurrent.add(place_1)
-
-    def get_matrix(self):
-        """ Get concurrency matrix from the initial net (after a change of basis).
-        """
-        matrix = [[0 for j in range(i + 1)] for i in range(len(self.places_initial))]
-
-        for i, pl1 in enumerate(self.places_initial):
-            for j, pl2 in enumerate(self.places_initial[:i+1]):
-                var1, var2 = self.get_variable(pl1), self.get_variable(pl2)
-                if (i == j and var1.reachable) or var2 in var1.concurrent:
-                    matrix[i][j] = 1
-
-        return matrix
+            place_1 = self.initial_net.order[place_1.id]
+            place_2 = self.initial_net.order[place_2.id]
+            self.matrix_initial[max(place_1, place_2)][min(place_1, place_2)] = 1
 
 
 class Variable:
     """
     Place or additional variable.
 
-    A variable defined by:
+    A variable is defined by:
     - an identifier,
+    - a Boolean indicating if the variable is additional,
+    - a list of redundant variables,
+    - a list of agglomerated variables.
     """
 
     def __init__(self, id, additional=False):
@@ -230,7 +206,3 @@ class Variable:
 
         self.redundant = []
         self.agglomerated = []
-
-        self.concurrent = set()
-
-        self.reachable = False
