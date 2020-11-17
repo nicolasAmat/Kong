@@ -99,7 +99,7 @@ def main():
     log.info("> Reduce the input Petri net")
     start_time = time.time()
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
-    subprocess.run(["reduce", "-rg,redundant,compact,convert,transitions", "-PNML", results.infile, f_reduced_net.name])
+    subprocess.run(["reduce", "-rg,redundant,compact,convert,transitions", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, f_reduced_net.name])
     if results.time:
         print("# Reduction time:", time.time() - start_time)
     transition_renamer(f_reduced_net.name)
