@@ -25,8 +25,8 @@ while IFS= read INSTANCE; do
         # Display instance name
         echo $INSTANCE_NAME
 
-        # Run smpt and redirect the result in 'reduction.out'
-        ../kong.py --time --reduction-ratio "${PATH_INPUTS}${INSTANCE}" > "${PATH_OUTPUTS}/${INSTANCE_NAME}.out"
+        # Run kong and redirect the result in 'reductions/<instance_name>.out'
+        ../kong.py --time --reduction-ratio --save-reduced "${PATH_INPUTS}${INSTANCE}" > "${PATH_OUTPUTS}/${INSTANCE_NAME}.out"
     fi
 
 done <$LIST
