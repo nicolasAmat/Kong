@@ -77,6 +77,10 @@ def main():
                         action='store_true',
                         help="show computation time")
 
+    parser.add_argument('--reduction-ratio',
+                        action='store_true',
+                        help='show the reduction ratio')
+
     results = parser.parse_args()
 
     # Verbose option
@@ -93,8 +97,11 @@ def main():
 
     # Reduce input net
     log.info("> Reduce the input Petri net")
+    start_time = time.time()
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
     subprocess.run(["reduce", "-rg,redundant,compact,convert,transitions", "-PNML", results.infile, f_reduced_net.name])
+    if results.time:
+        print("# Reduction time:", time.time() - start_time)
     transition_renamer(f_reduced_net.name)
 
     # Convert reduced net to .pnml format
@@ -105,6 +112,14 @@ def main():
     # Read reduced net
     log.info("> Read the reduced Petri net")
     reduced_net = PetriNet(f_reduced_pnml)
+
+    # Display reduction ratio if enabled
+    if results.reduction_ratio:
+        print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
+        # Close temporary files
+        f_reduced_net.close()
+        f_reduced_pnml.close()
+        return
 
     start_time = time.time()
 
@@ -132,7 +147,7 @@ def main():
 
     # Show computation time
     if results.time:
-        print("> Computation time:", time.time() - start_time)
+        print("# Computation time:", time.time() - start_time)
 
     # Close temporary files
     f_reduced_net.close()
