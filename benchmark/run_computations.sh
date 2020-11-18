@@ -23,8 +23,9 @@ mkdir -p $PATH_OUTPUTS
 # Get list of instances
 LIST=$1
 
-# Create a temporary file
-TEMP_FILE=$(mktemp)
+# Create temporary files
+TEMP_FILE_NUPN=$(mktemp)
+TEMP_FILE_RUN=$(mktemp)
 
 # Read instances
 while IFS= read INSTANCE; do
@@ -43,21 +44,25 @@ while IFS= read INSTANCE; do
     PATH_OUT_CAESAR="${PATH_OUTPUTS}${INSTANCE_NAME}_caesar.out"
 
     # Run kong
-    echo "timeout ${TIMEOUT} ../kong.py --time ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE
+    echo "timeout ${TIMEOUT} ../kong.py --time ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
 
     # Run PNML2NUPN
-    echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE
+    echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE_NUPN
 
     # Run caesar
-    echo "timeout ${TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE
+    echo "timeout ${TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE_RUN
 
 done <$LIST
 
-# Run previous commands in parallel
-cat $TEMP_FILE | xargs -t -L 1 -I CMD -P $MAX bash -c CMD
+# Compute trivial NUPNs in parallel
+cat $TEMP_FILE_NUPN | xargs -t -L 1 -I CMD -P $MAX bash -c CMD
 
-# Remove the temporary file
-rm $TEMP_FILE
+# Run computations in parallel
+cat $TEMP_FILE_RUN | xargs -t -L 1 -I CMD -P $MAX bash -c CMD
+
+# Remove temporary files
+rm $TEMP_FILE_NUPN
+rm $TEMP_FILE_RUN
 
 # Exit
 echo DONE
