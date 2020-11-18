@@ -47,7 +47,7 @@ def computation_converter(path_outputs):
     """ Convert `reductions/` files.
     """
     # Write computations data in `computation.csv`
-    with open('{}/reductions.csv'.format(path_outputs), 'w') as csv_computation:
+    with open('{}/computations.csv'.format(path_outputs), 'w') as csv_computation:
         computation_writer = csv.writer(csv_computation)
         computation_writer.writerow(['INSTANCE', 'TIME_KONG', 'TIME_CAESAR', 'CORRECTNESS'])
 
@@ -91,7 +91,7 @@ def main():
     """ Main function.
     """
     # Arguments parser
-    parser = argparse.ArgumentParser(description='Kong Benchmark Script')
+    parser = argparse.ArgumentParser(description='.out to .csv script')
 
     parser.add_argument('path_outputs',
                         metavar='outputs',
