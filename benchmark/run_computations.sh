@@ -53,7 +53,7 @@ while IFS= read INSTANCE; do
 
 done <$LIST
 
-# Run in commands in parallel
+# Run previous commands in parallel
 cat $TEMP_FILE | xargs -t -L 1 -I CMD -P $MAX bash -c CMD
 
 # Remove the temporary file
