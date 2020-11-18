@@ -118,7 +118,7 @@ def main():
             f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
             reduced_net_filename = f_reduced_net.name
         start_time = time.time()
-        subprocess.run(["reduce", "-rg,redundant,compact+,mg,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
+        subprocess.run(["reduce", "-rg,redundant,compact,mg,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
         if results.time:
             print("# Reduction time:", time.time() - start_time)
     transition_renamer(reduced_net_filename)
