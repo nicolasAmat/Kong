@@ -49,7 +49,7 @@ while IFS= read INSTANCE; do
     echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE
 
     # Run caesar
-    echo "time (timeout ${TIMEOUT} caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN}) &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE
+    echo "timeout ${TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE
 
 done <$LIST
 
