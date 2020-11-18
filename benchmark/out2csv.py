@@ -34,7 +34,7 @@ def reduction_converter(path_outputs):
    
                 # Get data
                 instance = instance.replace('.out', '')
-                reduction_time = reduction_data[0].split(': ')[1]
+                reduction_time = round(float(reduction_data[0].split(': ')[1]), 2)
                 reduction_ratio = reduction_data[1].split(': ')[1]
                 
                 # Write and print the corresponding row
