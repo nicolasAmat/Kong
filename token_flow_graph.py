@@ -46,7 +46,7 @@ class TFG:
         self.constants = set()
         self.parse_system(filename)
 
-        self.leafs = {}
+        self.leaves = {}
 
         self.matrix_reduced = matrix_reduced
         self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.initial_net.number_places)]
@@ -116,34 +116,34 @@ class TFG:
         """
         # Propagate constant variables
         for var in self.constants:
-            self.token_propagation(var, get_leafs=True, memoize=True)
+            self.token_propagation(var, get_leaves=True, memoize=True)
 
         # Propagate reachable roots
         for i in range(self.reduced_net.number_places):
             if self.matrix_reduced[i][i]:
                 var = self.get_variable(self.reduced_net.places[i])
-                self.token_propagation(var, get_leafs=True, memoize=True)
+                self.token_propagation(var, get_leaves=True, memoize=True)
 
         # Add concurrency relations from reduced matrix
         for i, line in enumerate(self.matrix_reduced):
             for j, concurrency in enumerate(line[:-1]):
                 if concurrency:
                     var1, var2 = self.get_variable(self.reduced_net.places[i]), self.get_variable(self.reduced_net.places[j])
-                    self.product(self.leafs[var1], self.leafs[var2])
+                    self.product(self.leaves[var1], self.leaves[var2])
 
         # Add concurrency relations for constant variables
         for var in self.constants:
-            self.product(self.leafs[var], self.reachable - set(self.leafs[var]))
+            self.product(self.leaves[var], self.reachable - set(self.leaves[var]))
 
         return self.matrix_initial
 
-    def token_propagation(self, var, get_leafs=False, memoize=False):
+    def token_propagation(self, var, get_leaves=False, memoize=False):
         """ Token propagation:
             - learn concurrency relations,
-            - memoize leafs.
+            - memoize leaves.
         """
         # Initialization
-        leafs = []
+        leaves = []
 
         # If place from the initial net, add to reachable
         if not var.additional:
@@ -151,30 +151,30 @@ class TFG:
             order = self.initial_net.order[var.id]
             self.matrix_initial[order][order] = 1
             # A leaf is a place from the initial net
-            leafs.append(var)
+            leaves.append(var)
 
         if var.redundant:
             # If redundant, learn new concurrency relations
             for agglomeration in var.agglomerated:
-                leafs += self.token_propagation(agglomeration, get_leafs=True)
+                leaves += self.token_propagation(agglomeration, get_leaves=True)
         
             for redundant in var.redundant:
-                new_leafs = self.token_propagation(redundant, get_leafs=True)
-                self.product(new_leafs, leafs)
-                leafs += new_leafs
+                new_leaves = self.token_propagation(redundant, get_leaves=True)
+                self.product(new_leaves, leaves)
+                leaves += new_leaves
 
         else:
             # Otherwise, continue propagation
             for child in var.agglomerated + var.redundant:
-                leafs += self.token_propagation(child, get_leafs=get_leafs)
+                leaves += self.token_propagation(child, get_leaves=get_leaves)
 
-        # Leafs memoization
+        # leaves memoization
         if memoize:
-            self.leafs[var] = leafs
+            self.leaves[var] = leaves
 
-        # Return leafs
-        if get_leafs:
-            return leafs
+        # Return leaves
+        if get_leaves:
+            return leaves
         else:
             return []
 
