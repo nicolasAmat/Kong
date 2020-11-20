@@ -90,7 +90,7 @@ class TFG:
         kind = equation.pop(0)
 
         # Constant
-        if equation[-1].isnumeric():
+        if equation[-1].isnumeric() and int(equation[-1]) != 0:
             self.constants.add(self.get_variable(equation[0]))
             return
 
