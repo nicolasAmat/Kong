@@ -45,7 +45,7 @@ def transition_renamer(filename):
     with open(filename, 'r') as file:
         filedata = file.read()
 
-    filedata = filedata.replace('tr ', 'tr T_')
+    filedata = filedata.replace('tr ', 'tr T_').replace('T_{','{T_')
 
     with open(filename, 'w') as file:
         file.write(filedata)
