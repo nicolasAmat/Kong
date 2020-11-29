@@ -121,7 +121,8 @@ def main():
         subprocess.run(["reduce", "-rg,redundant,compact,mg,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
         if results.time:
             print("# Reduction time:", time.time() - start_time)
-    transition_renamer(reduced_net_filename)
+    if not results.reduced_net:
+        transition_renamer(reduced_net_filename)
 
     # Convert reduced net to .pnml format
     log.info("> Convert the reduced Petri net to '.pnml' format")
