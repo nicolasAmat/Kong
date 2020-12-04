@@ -46,7 +46,7 @@ class TFG:
         self.constants = set()
         self.parse_system(filename)
 
-        self.leaves = {}
+        self.children = {}
 
         self.matrix_reduced = matrix_reduced
         self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.initial_net.number_places)]
@@ -114,36 +114,36 @@ class TFG:
     def change_of_basis(self):
         """ Change of Basis method.
         """
-        # Propagate constant variables
+        # Propagate constant roots
         for var in self.constants:
-            self.token_propagation(var, get_leaves=True, memoize=True)
+            self.token_propagation(var, get_children=True, memoize=True)
 
         # Propagate reachable roots
         for i in range(self.reduced_net.number_places):
             if self.matrix_reduced[i][i]:
                 var = self.get_variable(self.reduced_net.places[i])
-                self.token_propagation(var, get_leaves=True, memoize=True)
+                self.token_propagation(var, get_children=True, memoize=True)
 
         # Add concurrency relations from reduced matrix
         for i, line in enumerate(self.matrix_reduced):
             for j, concurrency in enumerate(line[:-1]):
                 if concurrency:
                     var1, var2 = self.get_variable(self.reduced_net.places[i]), self.get_variable(self.reduced_net.places[j])
-                    self.product(self.leaves[var1], self.leaves[var2])
+                    self.product(self.children[var1], self.children[var2])
 
         # Add concurrency relations for constant variables
         for var in self.constants:
-            self.product(self.leaves[var], self.reachable - set(self.leaves[var]))
+            self.product(self.children[var], self.reachable - set(self.children[var]))
 
         return self.matrix_initial
 
-    def token_propagation(self, var, get_leaves=False, memoize=False):
+    def token_propagation(self, var, get_children=False, memoize=False):
         """ Token propagation:
             - learn concurrency relations,
-            - memoize leaves.
+            - memoize children.
         """
         # Initialization
-        leaves = []
+        children = []
 
         # If place from the initial net, add to reachable
         if not var.additional:
@@ -151,30 +151,30 @@ class TFG:
             order = self.initial_net.order[var.id]
             self.matrix_initial[order][order] = 1
             # A leaf is a place from the initial net
-            leaves.append(var)
+            children.append(var)
 
+        # Get children if there are some redundant nodes
         if var.redundant:
-            # If redundant, learn new concurrency relations
-            for agglomeration in var.agglomerated:
-                leaves += self.token_propagation(agglomeration, get_leaves=True)
+            get_children = True
+
+        # Token propagation on the agglomerations
+        for agglomerated in var.agglomerated:
+            children += self.token_propagation(agglomerated, get_children=get_children)
         
-            for redundant in var.redundant:
-                new_leaves = self.token_propagation(redundant, get_leaves=True)
-                self.product(new_leaves, leaves)
-                leaves += new_leaves
+        # Token propagation on the redundancies
+        for redundant in var.redundant:
+            new_children = self.token_propagation(redundant, get_children=True)
+            # Learn new concurrent places
+            self.product(new_children, children)
+            children += new_children
 
-        else:
-            # Otherwise, continue propagation
-            for child in var.agglomerated + var.redundant:
-                leaves += self.token_propagation(child, get_leaves=get_leaves)
-
-        # leaves memoization
+        # Children memoization
         if memoize:
-            self.leaves[var] = leaves
+            self.children[var] = children
 
-        # Return leaves
-        if get_leaves:
-            return leaves
+        # Return children
+        if get_children:
+            return children
         else:
             return []
 
