@@ -26,18 +26,25 @@ $> ./kong.py <path_to_.pnml>
 You can list all the options by using the *help* option:
 ```
 $> ./kong.py --help
-usage: kong.py [-h] [--version] [-v] [-pl] filename
+usage: kong.py [-h] [--version] [-v] [--save-reduced | --reduced REDUCED_NET]
+               [-pl] [-t] [--reduction-ratio]
+               filename
 
 Koncurrent Places Squasher
 
 positional arguments:
-  filename            input Petri net (.pnml format)
+  filename              input Petri net (.pnml format)
 
 optional arguments:
-  -h, --help          show this help message and exit
-  --version           show the version number and exit
-  -v, --verbose       increase output verbosity
-  -pl, --place_names  display place names
+  -h, --help            show this help message and exit
+  --version             show the version number and exit
+  -v, --verbose         increase output verbosity
+  --save-reduced, -sr   save the reduced net
+  --reduced REDUCED_NET, -r REDUCED_NET
+                        reduced Petri Net (.net format)
+  -pl, --place_names    display place names
+  -t, --time            show computation time
+  --reduction-ratio     show the reduction ratio
 ```
 
 ## Performance Evaluation
