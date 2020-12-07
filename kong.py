@@ -50,6 +50,15 @@ def transition_renamer(filename):
     with open(filename, 'w') as file:
         file.write(filedata)
 
+
+def exit_helper(results, f_reduced_net, f_reduced_pnml):
+    """ Close temporary files.
+    """
+    if not (results.save_reduced or results.reduced_net):
+        f_reduced_net.close()
+    f_reduced_pnml.close()
+
+
 def main():
     """ Main Function.
     """
@@ -108,6 +117,7 @@ def main():
     initial_net = PetriNet(results.infile)
 
     # Manage reduced net
+    f_reduced_net = None
     if results.reduced_net:
         reduced_net_filename = results.reduced_net
     else:
@@ -118,7 +128,7 @@ def main():
             f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
             reduced_net_filename = f_reduced_net.name
         start_time = time.time()
-        subprocess.run(["reduce", "-rg,redundant,compact,mg,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
+        subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
         if results.time:
             print("# Reduction time:", time.time() - start_time)
     if not results.reduced_net:
@@ -136,10 +146,7 @@ def main():
     # Display reduction ratio if enabled
     if results.reduction_ratio:
         print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
-        # Close temporary files
-        if not (results.save_reduced or results.reduced_net):
-            f_reduced_net.close()
-        f_reduced_pnml.close()
+        exit_helper(results, f_reduced_net, f_reduced_pnml)
         return
 
     start_time = time.time()
@@ -149,9 +156,7 @@ def main():
         log.info("> Convert the reduced Petri net to '.nupn' format")
         PNML2NUPN = os.getenv('PNML2NUPN')
         if not PNML2NUPN:
-            if not (results.save_reduced or results.reduced_net):
-                f_reduced_net.close()
-            f_reduced_pnml.close()
+            exit_helper(results, f_reduced_net, f_reduced_pnml)
             sys.exit("Environment variable PNML2NUPN not defined!")
         subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
 
@@ -160,6 +165,9 @@ def main():
         # Compute concurrency matrix of the reduced net
         log.info("> Compute the concurrency matrix of the reduced Petri net")
         matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        if matrix_reduced == '':
+            exit_helper(results, f_reduced_net, f_reduced_pnml)
+            return
     else:
         matrix_reduced = ''
 
@@ -171,10 +179,7 @@ def main():
     if results.time:
         print("# Computation time:", time.time() - start_time)
 
-    # Close temporary files
-    if not (results.save_reduced or results.reduced_net):
-        f_reduced_net.close()
-    f_reduced_pnml.close()
+    exit_helper(results, f_reduced_net, f_reduced_pnml)
 
 if __name__ == '__main__':
     main()
