@@ -34,7 +34,7 @@ class ConcurrencyMatrix:
     """ Change of basis of the concurrency matrix.
     """
 
-    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False, equations=False, graph=False):
+    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False, show_equations=False, draw_graph=False, show_reduced_matrix=False):
         """ Initializer.
         """
         self.initial_net = initial_net
@@ -44,10 +44,18 @@ class ConcurrencyMatrix:
         self.matrix_reduced = []
         self.fill_matrix_from_str(matrix_reduced)
 
-        # Compute and display the initial Petri net concurrency matrix
-        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.matrix_reduced, equations, graph)
+        # Construct the TFG
+        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.matrix_reduced, show_equations, draw_graph)
+
+        # Display the concurrency matrix of the reduced net if asked
+        if show_reduced_matrix:
+            print("# Reduced net concurrency matrix")
+            self.display_matrix(self.reduced_net, self.matrix_reduced, place_names)
+
+        # Change of basis
         self.matrix_initial = self.method.change_of_basis()
-        self.display_matrix(place_names)
+        # Display the concurrency matrix
+        self.display_matrix(self.initial_net, self.matrix_initial, place_names)
 
     def fill_matrix_from_str(self, matrix):
         """ Fill matrix from caesar.bdd output.
@@ -79,18 +87,23 @@ class ConcurrencyMatrix:
 
             self.matrix_reduced.append(new_line)
 
-    def display_matrix(self, place_names):
+    def display_matrix(self, net, matrix, place_names):
             """ Display concurrency matrix.
                 (with run-length encoding)
             """
             if place_names:
-                max_len = max([len(pl) for pl in self.initial_net.places])
+                max_len = max([len(pl) for pl in net.places])
 
-            for pl, line in zip(self.initial_net.places, self.matrix_initial):
+            if net == self.reduced_net:
+                prefix = '# '
+            else:
+                prefix = ''
+
+            for pl, line in zip(net.places, matrix):
                 if place_names:
-                    text = pl + ' ' * (max_len - len(pl) + 2)
+                    text = prefix + pl + ' ' * (max_len - len(pl) + 2)
                 else:
-                    text = ''
+                    text = prefix
                 for i in range(len(line)):
                     elem = line[i]
                     if i == 0:

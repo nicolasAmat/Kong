@@ -35,7 +35,7 @@ class TFG:
     Token Flow Graph method.
     """
 
-    def __init__(self, filename, initial_net, reduced_net, matrix_reduced=[], equations=False, graph=False):
+    def __init__(self, filename, initial_net, reduced_net, matrix_reduced=[], show_equations=False, draw_graph=False):
         """ Initializer.
         """
         self.initial_net = initial_net
@@ -46,17 +46,17 @@ class TFG:
         self.init_variables()
 
         self.constants = set()
-        self.parse_system(filename, equations)
+        self.parse_system(filename, show_equations)
 
-        if graph:
-            self.show_TFG()
+        if draw_graph:
+            self.draw_TFG()
 
         self.children = {}
 
         self.matrix_reduced = matrix_reduced
         self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.initial_net.number_places)]
 
-    def show_TFG(self):
+    def draw_TFG(self):
         """ Draw the Token Flow Graph.
         """
         tfg = Graph('TFG')
@@ -97,7 +97,7 @@ class TFG:
             self.variables[id_var] = var
             return var
 
-    def parse_system(self, filename, equations):
+    def parse_system(self, filename, show_equations):
         """ System of reduction equations parser.
             Input format: .net (output of the `reduce` tool)
         """
@@ -105,8 +105,10 @@ class TFG:
             with open(filename, 'r') as fp:
                 content = re.search(r'# generated equations\n(.*)?\n\n', fp.read(), re.DOTALL)
                 if content:
+                    if show_equations:
+                        print("# System of equations")
                     for line in re.split('\n+', content.group())[1:-1]:
-                        if equations:
+                        if show_equations:
                             print(line)
                         self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', '')))
 

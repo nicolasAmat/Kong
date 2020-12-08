@@ -96,19 +96,23 @@ def main():
 
     parser.add_argument('-t', '--time',
                         action='store_true',
-                        help='show computation time')
+                        help='show the computation time')
 
     parser.add_argument('--reduction-ratio',
                         action='store_true',
                         help='show the reduction ratio')
 
-    parser.add_argument('--equations', '-e',
+    parser.add_argument('--show-equations',
                         action='store_true',
                         help='show the reduction equations')
 
-    parser.add_argument('--graph', '-g',
+    parser.add_argument('--draw-graph',
                         action='store_true',
                         help='draw the Token Flow Graph')
+
+    parser.add_argument('--show-reduced-matrix',
+                        action='store_true',
+                        help='show the reduced matrix')
 
     results = parser.parse_args()
 
@@ -180,7 +184,7 @@ def main():
 
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
-    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names, results.equations, results.graph)
+    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names, results.show_equations, results.draw_graph, results.show_reduced_matrix)
 
     # Show computation time
     if results.time:

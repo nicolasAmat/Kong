@@ -27,7 +27,8 @@ You can list all the options by using the *help* option:
 ```
 $> ./kong.py --help
 usage: kong.py [-h] [--version] [-v] [--save-reduced | --reduced REDUCED_NET]
-               [-pl] [-t] [--reduction-ratio]
+               [-pl] [-t] [--reduction-ratio] [--show-equations]
+               [--draw-graph] [--show-reduced-matrix]
                filename
 
 Koncurrent Places Squasher
@@ -43,8 +44,12 @@ optional arguments:
   --reduced REDUCED_NET, -r REDUCED_NET
                         reduced Petri Net (.net format)
   -pl, --place_names    display place names
-  -t, --time            show computation time
+  -t, --time            show the computation time
   --reduction-ratio     show the reduction ratio
+  --show-equations      show the reduction equations
+  --draw-graph          draw the Token Flow Graph
+  --show-reduced-matrix
+                        show the reduced matrix
 ```
 
 ## Performance Evaluation
