@@ -149,8 +149,6 @@ def main():
         exit_helper(results, f_reduced_net, f_reduced_pnml)
         return
 
-    start_time = time.time()
-
     if reduced_net.places:
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
@@ -169,6 +167,7 @@ def main():
             exit_helper(results, f_reduced_net, f_reduced_pnml)
             return
     else:
+        start_time = time.time()
         matrix_reduced = ''
 
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
@@ -182,5 +181,6 @@ def main():
     exit_helper(results, f_reduced_net, f_reduced_pnml)
 
 if __name__ == '__main__':
+    sys.setrecursionlimit(10000)
     main()
     exit(0)
