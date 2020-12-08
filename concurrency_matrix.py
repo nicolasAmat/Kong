@@ -34,7 +34,7 @@ class ConcurrencyMatrix:
     """ Change of basis of the concurrency matrix.
     """
 
-    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False):
+    def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False, equations=False, graph=False):
         """ Initializer.
         """
         self.initial_net = initial_net
@@ -45,7 +45,7 @@ class ConcurrencyMatrix:
         self.fill_matrix_from_str(matrix_reduced)
 
         # Compute and display the initial Petri net concurrency matrix
-        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.matrix_reduced)
+        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.matrix_reduced, equations, graph)
         self.matrix_initial = self.method.change_of_basis()
         self.display_matrix(place_names)
 

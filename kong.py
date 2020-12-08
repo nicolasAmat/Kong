@@ -67,22 +67,22 @@ def main():
     parser.add_argument('--version',
                         action='version',
                         version='%(prog)s 1.0.0',
-                        help="show the version number and exit")
+                        help='show the version number and exit')
 
     parser.add_argument('-v', '--verbose',
                         action='store_true',
-                        help="increase output verbosity")
+                        help='increase output verbosity')
 
     parser.add_argument('infile',
                         metavar='filename',
                         type=str,
-                        help="input Petri net (.pnml format)")
+                        help='input Petri net (.pnml format)')
 
     group_reductions = parser.add_mutually_exclusive_group()
 
     group_reductions.add_argument('--save-reduced', '-sr',
                                     action='store_true',
-                                    help="save the reduced net")
+                                    help='save the reduced net')
 
     group_reductions.add_argument('--reduced', '-r',
                                     action='store',
@@ -92,15 +92,23 @@ def main():
 
     parser.add_argument('-pl', '--place_names',
                         action='store_true',
-                        help="display place names")
+                        help='display place names')
 
     parser.add_argument('-t', '--time',
                         action='store_true',
-                        help="show computation time")
+                        help='show computation time')
 
     parser.add_argument('--reduction-ratio',
                         action='store_true',
                         help='show the reduction ratio')
+
+    parser.add_argument('--equations', '-e',
+                        action='store_true',
+                        help='show the reduction equations')
+
+    parser.add_argument('--graph', '-g',
+                        action='store_true',
+                        help='draw the Token Flow Graph')
 
     results = parser.parse_args()
 
@@ -172,7 +180,7 @@ def main():
 
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
-    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names)
+    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names, results.equations, results.graph)
 
     # Show computation time
     if results.time:

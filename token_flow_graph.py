@@ -27,13 +27,15 @@ __version__ = "1.0.0"
 import itertools
 import re
 
+from graphviz import Graph
+
 
 class TFG:
     """
     Token Flow Graph method.
     """
 
-    def __init__(self, filename, initial_net, reduced_net, matrix_reduced=[]):
+    def __init__(self, filename, initial_net, reduced_net, matrix_reduced=[], equations=False, graph=False):
         """ Initializer.
         """
         self.initial_net = initial_net
@@ -44,12 +46,39 @@ class TFG:
         self.init_variables()
 
         self.constants = set()
-        self.parse_system(filename)
+        self.parse_system(filename, equations)
+
+        if graph:
+            self.show_TFG()
 
         self.children = {}
 
         self.matrix_reduced = matrix_reduced
         self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.initial_net.number_places)]
+
+    def show_TFG(self):
+        """ Draw the Token Flow Graph.
+        """
+        tfg = Graph('TFG')
+        
+        tfg.attr('node', shape='circle', fixedsize='True')
+        for node in self.variables.values():
+            tfg.node(node.id)
+
+        tfg.attr('edge', arrowtail='dot')
+        for node in self.variables.values():
+            for redundant in node.redundant:
+                tfg.edge(node.id, redundant.id, dir='both')
+
+        for node in self.constants:
+            tfg.edge('1', node.id, dir='both')
+
+        tfg.attr('edge', arrowtail='odot')
+        for node in self.variables.values():
+            for agglomerated in node.agglomerated:
+                tfg.edge(node.id, agglomerated.id, dir='both')
+
+        tfg.view()
 
     def init_variables(self):
         """ Create a Variable for each place from the initial net.
@@ -68,7 +97,7 @@ class TFG:
             self.variables[id_var] = var
             return var
 
-    def parse_system(self, filename):
+    def parse_system(self, filename, equations):
         """ System of reduction equations parser.
             Input format: .net (output of the `reduce` tool)
         """
@@ -77,6 +106,8 @@ class TFG:
                 content = re.search(r'# generated equations\n(.*)?\n\n', fp.read(), re.DOTALL)
                 if content:
                     for line in re.split('\n+', content.group())[1:-1]:
+                        if equations:
+                            print(line)
                         self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', '')))
 
             fp.close()
@@ -90,8 +121,9 @@ class TFG:
         kind = equation.pop(0)
 
         # Constant
-        if equation[-1].isnumeric() and int(equation[-1]) != 0:
-            self.constants.add(self.get_variable(equation[0]))
+        if equation[-1].isnumeric():
+            if int(equation[-1]) != 0:
+                self.constants.add(self.get_variable(equation[0]))
             return
 
         variables = [self.get_variable(id_var) for id_var in equation]
