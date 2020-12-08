@@ -6,7 +6,7 @@
 # Set timeout
 TIMEOUT=3600
 # Set max instances
-MAX=8
+MAX=4
 # Set paths
 PATH_INPUTS="models/mcc.lip6.fr/archives/"
 PATH_OUTPUTS="OUTPUTS/computations/"
@@ -44,13 +44,13 @@ while IFS= read INSTANCE; do
     PATH_OUT_CAESAR="${PATH_OUTPUTS}${INSTANCE_NAME}_caesar.out"
 
     # Run kong
-    echo "timeout ${TIMEOUT} ../kong.py --time ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
+    echo "timeout --kill-after=0 ${TIMEOUT} ../kong.py --time ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
 
     # Run PNML2NUPN
     echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE_NUPN
 
     # Run caesar
-    echo "timeout ${TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE_RUN
+    echo "timeout --kill-after=0 ${TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE_RUN
 
 done <$LIST
 
