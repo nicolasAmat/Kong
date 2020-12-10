@@ -72,9 +72,6 @@ class TFG:
             for redundant in node.redundant:
                 tfg.edge(node.id, redundant.id, dir='both')
 
-        for node in self.constants:
-            tfg.edge('1', node.id, dir='both')
-
         tfg.attr('edge', arrowtail='odot')
         for node in self.variables.values():
             for agglomerated in node.agglomerated:
