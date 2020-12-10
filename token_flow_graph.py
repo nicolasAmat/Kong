@@ -43,9 +43,11 @@ class TFG:
 
         self.variables = {}
         self.reachable = set()
-        self.init_variables()
 
-        self.constants = set()
+        self.null_root = self.get_variable('0')
+        self.marked_root = self.get_variable('1')
+
+        self.init_variables()
         self.parse_system(filename, show_equations)
 
         if draw_graph:
@@ -111,8 +113,8 @@ class TFG:
                         if show_equations:
                             print(line)
                         self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', '')))
-
             fp.close()
+
         except FileNotFoundError as e:
             exit(e)
 
@@ -120,14 +122,8 @@ class TFG:
         """ Equation parser.
             Input format: .net (output of the `reduced` tool)
         """
+        # Split equation
         kind = equation.pop(0)
-
-        # Constant
-        if equation[-1].isnumeric():
-            if int(equation[-1]) != 0:
-                self.constants.add(self.get_variable(equation[0]))
-            return
-
         variables = [self.get_variable(id_var) for id_var in equation]
 
         # Redundant (Duplicated or Shortcut)
@@ -149,14 +145,14 @@ class TFG:
         """ Change of Basis method.
         """
         # Propagate constant roots
-        for var in self.constants:
-            self.token_propagation(var, get_children=True, memoize=True)
+        self.token_propagation(self.marked_root, get_children=True, memoize=True)
 
         # Propagate reachable roots
         for i in range(self.reduced_net.number_places):
             if self.matrix_reduced[i][i]:
                 var = self.get_variable(self.reduced_net.places[i])
                 self.token_propagation(var, get_children=True, memoize=True)
+                self.product(self.children[self.marked_root], self.children[var])
 
         # Add concurrency relations from reduced matrix
         for i, line in enumerate(self.matrix_reduced):
@@ -164,10 +160,6 @@ class TFG:
                 if concurrency:
                     var1, var2 = self.get_variable(self.reduced_net.places[i]), self.get_variable(self.reduced_net.places[j])
                     self.product(self.children[var1], self.children[var2])
-
-        # Add concurrency relations for constant variables
-        for var in self.constants:
-            self.product(self.children[var], self.reachable - set(self.children[var]))
 
         return self.matrix_initial
 
