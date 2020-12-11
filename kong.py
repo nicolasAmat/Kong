@@ -90,6 +90,12 @@ def main():
                                     type=str,
                                     help='reduced Petri Net (.net format)')
 
+    parser.add_argument('--timeout',
+                        action='store',
+                        dest='timeout',
+                        type=str,
+                        help='set time limit for the BDD-based exploration (caesar.bdd)')
+
     parser.add_argument('-pl', '--place_names',
                         action='store_true',
                         help='display place names')
@@ -169,6 +175,12 @@ def main():
             exit_helper(results, f_reduced_net, f_reduced_pnml)
             sys.exit("Environment variable PNML2NUPN not defined!")
         subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
+
+        # Set BDD exploration time limit
+        if results.timeout:
+            os.environ['CAESAR_BDD_TIMEOUT'] = results.timeout
+        elif os.getenv('CAESAR_BDD_TIMEOUT'):
+            del os.environ['CAESAR_BDD_TIMEOUT']
 
         start_time = time.time()
 

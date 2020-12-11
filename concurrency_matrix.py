@@ -37,15 +37,17 @@ class ConcurrencyMatrix:
     def __init__(self, initial_net, reduced_net, filename_system, matrix_reduced, place_names=False, show_equations=False, draw_graph=False, show_reduced_matrix=False):
         """ Initializer.
         """
+        # Petri nets
         self.initial_net = initial_net
         self.reduced_net = reduced_net
 
         # Parse the reduced Petri net concurrency matrix
         self.matrix_reduced = []
+        self.complete_matrix = True
         self.fill_matrix_from_str(matrix_reduced)
 
-        # Construct the TFG
-        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.matrix_reduced, show_equations, draw_graph)
+        # Construct the Token Flow Graph
+        self.method = TFG(filename_system, self.initial_net, self.reduced_net, self.complete_matrix, self.matrix_reduced, show_equations, draw_graph)
 
         # Display the concurrency matrix of the reduced net if asked
         if show_reduced_matrix:
@@ -82,8 +84,10 @@ class ConcurrencyMatrix:
                 elif parse_multiplier:
                     multiplier += value
                 else:
-                    new_line.append(int(value))
-                    past_value = int(value)
+                    if value == '.':
+                        self.complete_matrix = False
+                    new_line.append(value)
+                    past_value = value
 
             self.matrix_reduced.append(new_line)
 
@@ -112,7 +116,7 @@ class ConcurrencyMatrix:
                     if i == len(line) - 1:
                         if previous != elem:
                             text += self.rle_compression(previous, counter)
-                            text += str(elem)
+                            text += elem
                         else:
                             text += self.rle_compression(previous, counter + 1)
                     else:

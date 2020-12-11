@@ -35,69 +35,76 @@ class TFG:
     Token Flow Graph method.
     """
 
-    def __init__(self, filename, initial_net, reduced_net, matrix_reduced=[], show_equations=False, draw_graph=False):
+    def __init__(self, filename, initial_net, reduced_net, complete_matrix, matrix_reduced=[], show_equations=False, draw_graph=False):
         """ Initializer.
         """
+        # Petri nets
         self.initial_net = initial_net
         self.reduced_net = reduced_net
 
-        self.variables = {}
-        self.reachable = set()
+        # Nodes initialization
+        self.nodes = {}
+        self.init_nodes()
+        self.dead_root = self.get_node('0')
+        self.marked_root = self.get_node('1')
 
-        self.null_root = self.get_variable('0')
-        self.marked_root = self.get_variable('1')
-
-        self.init_variables()
+        # Parse the system of equations and build the Token Flow Graph
         self.parse_system(filename, show_equations)
-
         if draw_graph:
             self.draw_TFG()
 
-        self.children = {}
-
+        # Matrices initialization
+        self.complete_matrix = complete_matrix
         self.matrix_reduced = matrix_reduced
-        self.matrix_initial = [[0 for j in range(i + 1)] for i in range(self.initial_net.number_places)]
+        if self.complete_matrix:
+            relation = '0'
+        else:
+            relation = '.'
+        self.matrix_initial = [[relation for j in range(i + 1)] for i in range(self.initial_net.number_places)]
 
     def draw_TFG(self):
         """ Draw the Token Flow Graph.
         """
         tfg = Graph('TFG')
-        
+
+        # Draw nodes
         tfg.attr('node', shape='circle', fixedsize='True')
-        for node in self.variables.values():
+        for node in self.nodes.values():
             tfg.node(node.id)
 
+        # Draw redundant arcs
         tfg.attr('edge', arrowtail='dot')
-        for node in self.variables.values():
+        for node in self.nodes.values():
             for redundant in node.redundant:
                 tfg.edge(node.id, redundant.id, dir='both')
 
+        # Draw agglomerated arcs
         tfg.attr('edge', arrowtail='odot')
-        for node in self.variables.values():
+        for node in self.nodes.values():
             for agglomerated in node.agglomerated:
                 tfg.edge(node.id, agglomerated.id, dir='both')
 
         tfg.view()
 
-    def init_variables(self):
-        """ Create a Variable for each place from the initial net.
+    def init_nodes(self):
+        """ Create a node for each place from the initial net.
         """
         for place in self.initial_net.places:
-            self.variables[place] = Variable(place)
+            self.nodes[place] = Node(place)
 
-    def get_variable(self, id_var):
-        """ Return the corresponding Variable,
-            or create a new Variable if it does not exist.
+    def get_node(self, id_node):
+        """ Return the node that corresponds to the id if it exists,
+            otherwise create a new one and return it.
         """
-        if id_var in self.variables:
-            return self.variables[id_var]
+        if id_node in self.nodes:
+            return self.nodes[id_node]
         else:
-            var = Variable(id_var, additional=True)
-            self.variables[id_var] = var
-            return var
+            node = Node(id_node, additional=True)
+            self.nodes[id_node] = node
+            return node
 
     def parse_system(self, filename, show_equations):
-        """ System of reduction equations parser.
+        """ System of equations parser.
             Input format: .net (output of the `reduce` tool)
         """
         try:
@@ -121,19 +128,19 @@ class TFG:
         """
         # Split equation
         kind = equation.pop(0)
-        variables = [self.get_variable(id_var) for id_var in equation]
+        nodes = [self.get_node(id_node) for id_node in equation]
 
-        # Redundant (Duplicated or Shortcut)
+        # Redundance (Duplication or Shortcut)
         if kind == 'R':
-            removed_place = variables.pop(0)
-            for var in variables:
-                var.redundant.append(removed_place)
+            removed_place = nodes.pop(0)
+            for node in nodes:
+                node.redundant.append(removed_place)
             return
 
         # Agglomeration
         if kind == 'A':
-            new_place = variables.pop(0)
-            new_place.agglomerated += variables
+            new_place = nodes.pop(0)
+            new_place.agglomerated += nodes
             return
 
         raise ValueError("Invalid reduction equation")
@@ -142,58 +149,82 @@ class TFG:
         """ Change of Basis method.
         """
         # Propagate constant roots
-        self.token_propagation(self.marked_root, get_children=True, memoize=True)
+        self.token_propagation(self.marked_root, '1', get_children=True, memoize=True)
+        if not self.complete_matrix:
+            self.token_propagation(self.dead_root, '0', get_children=True, memoize=True)
 
-        # Propagate reachable roots
+        # Propagate roots values (in the reduced net)
         for i in range(self.reduced_net.number_places):
-            if self.matrix_reduced[i][i]:
-                var = self.get_variable(self.reduced_net.places[i])
-                self.token_propagation(var, get_children=True, memoize=True)
-                self.product(self.children[self.marked_root], self.children[var])
+            node = self.get_node(self.reduced_net.places[i])
+            
+            # Reachable root
+            if self.matrix_reduced[i][i] == '1':
+                self.token_propagation(node, '1', get_children=True, memoize=True)
+                # Product with marked root
+                self.product(self.marked_root.children, node.children, '1')
+            
+            # Propagate the independency relation in case of partial matrix
+            if not self.complete_matrix:
+                # Dead root
+                if self.matrix_reduced[i][i] == '0':
+                    self.token_propagation(node, '0', get_children=True, memoize=True)
+                # Product with dead root
+                self.product(self.dead_root.children, node.children, '0')
 
-        # Add concurrency relations from reduced matrix
+        # Propagate the concurrency relation from the reduced matrix
         for i, line in enumerate(self.matrix_reduced):
             for j, concurrency in enumerate(line[:-1]):
-                if concurrency:
-                    var1, var2 = self.get_variable(self.reduced_net.places[i]), self.get_variable(self.reduced_net.places[j])
-                    self.product(self.children[var1], self.children[var2])
+                # If two root are concurrent then each pair of children are concurrent
+                if concurrency == '1':
+                    node1, node2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
+                    self.product(node1.children, node2.children, '1')
+                # In case of partial matrix
+                # If two root are independent then each pair of children are independent
+                if not self.complete_matrix and concurrency == '0':
+                    node1, node2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
+                    self.product(node1.children, node2.children, '0')
 
         return self.matrix_initial
 
-    def token_propagation(self, var, get_children=False, memoize=False):
+    def token_propagation(self, node, value='1', get_children=False, memoize=False):
         """ Token propagation:
-            - learn concurrency relations,
+            - propagate reachable places,
+            - learn new concurrent/independent places,
             - memoize children.
         """
         # Initialization
         children = []
 
-        # If place from the initial net, add to reachable
-        if not var.additional:
-            self.reachable.add(var)
-            order = self.initial_net.order[var.id]
-            self.matrix_initial[order][order] = 1
-            # A leaf is a place from the initial net
-            children.append(var)
+        # If the node is a place from the initial net:
+        # - add the value in the concurrency matrix (reachable / dead),
+        # - add to the children list.
+        if not node.additional:
+            order = self.initial_net.order[node.id]
+            self.matrix_initial[order][order] = value
+            children.append(node)
 
-        # Get children if there are some redundant nodes
-        if var.redundant:
+        # If the node has some redundant nodes get the children
+        if node.redundant:
             get_children = True
 
-        # Token propagation on the agglomerations
-        for agglomerated in var.agglomerated:
-            children += self.token_propagation(agglomerated, get_children=get_children)
+        # Token propagation over the agglomerated nodes
+        for agglomerated in node.agglomerated:
+            new_children = self.token_propagation(agglomerated, value, get_children=get_children)
+            # Learn new independant places
+            if value == '0':
+                self.product(new_children, children, value)
+            children += new_children
         
         # Token propagation on the redundancies
-        for redundant in var.redundant:
-            new_children = self.token_propagation(redundant, get_children=True)
+        for redundant in node.redundant:
+            new_children = self.token_propagation(redundant, value, get_children=True)
             # Learn new concurrent places
-            self.product(new_children, children)
+            self.product(new_children, children, value)
             children += new_children
 
         # Children memoization
         if memoize:
-            self.children[var] = children
+            node.children = children
 
         # Return children
         if get_children:
@@ -201,24 +232,26 @@ class TFG:
         else:
             return []
 
-    def product(self, places_1, places_2):
-        """ Add the cartesian product between two sets to the concurrent relation.
+    def product(self, places1, places2, value='1'):
+        """ Set the cartesian product between two lists of places
+            to a value in the initial matrix. 
         """
-        for place_1, place_2 in itertools.product(places_1, places_2):
-            place_1 = self.initial_net.order[place_1.id]
-            place_2 = self.initial_net.order[place_2.id]
-            self.matrix_initial[max(place_1, place_2)][min(place_1, place_2)] = 1
+        for place1, place2 in itertools.product(places1, places2):
+            place1 = self.initial_net.order[place1.id]
+            place2 = self.initial_net.order[place2.id]
+            self.matrix_initial[max(place1, place2)][min(place1, place2)] = value
 
 
-class Variable:
+class Node:
     """
     Place or additional variable.
 
-    A variable is defined by:
+    A node is defined by:
     - an identifier,
-    - a Boolean indicating if the variable is additional,
-    - a list of redundant variables,
-    - a list of agglomerated variables.
+    - a Boolean indicating if the node is an additional variable (not in the initial net),
+    - a list of redundant nodes,
+    - a list of agglomerated nodes,
+    - a list of children in the TFG (optional).
     """
 
     def __init__(self, id, additional=False):
@@ -227,5 +260,9 @@ class Variable:
         self.id = id
         self.additional = additional
 
+        # Arcs
         self.redundant = []
         self.agglomerated = []
+
+        # Descendants in the TFG that are not additional
+        self.children = None
