@@ -267,4 +267,4 @@ class Node:
         self.agglomerated = []
 
         # Descendants in the TFG that are not additional
-        self.children = None
+        self.children = []
