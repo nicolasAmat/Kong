@@ -127,39 +127,74 @@ def partial_computations_converter(path_outputs):
                     # Round up reduction time (2 decimals)
                     time_kong = math.ceil(float(kong[-1].split(': ')[1]) * 100) / 100
                     # Kong matrix
-                    matrix_kong = kong[:-1]
+                    matrix_kong = decompress_matrix(kong[:-1])
 
             # Get caesar data
             with open(caesar_outfile) as out_caesar:
                 caesar = out_caesar.read().splitlines()
                 time_caesar = np.nan
                 matrix_caesar = None
-                if caesar:
+                if len(caesar) > 1:
                     time_data = caesar[-2].split('user')
                     if len(time_data) > 1:
                         # Caesar time
                         time_caesar = float(time_data[0])
                         # Caesar matrix
-                        matrix_caesar = caesar[:-2]
+                        if 'caesar.bdd' in caesar[0]:
+                            caesar.pop(0)
+                        matrix_caesar = decompress_matrix(caesar[:-2])
 
             # Get correctness and number of computed relations
             correctness = True
             number_relations_kong, number_relations_caesar = 0, 0
-            for line_kong, line_caesar in zip(matrix_kong, matrix_caesar):
-                for relation_kong, relation_caesar in zip(line_kong, line_caesar):
-                    # Increments known relations
-                    if relation_kong != '.':
-                        number_relations_kong += 1
-                    if relation_caesar != '.':
-                        number_relations_caesar += 1
-                    # Check that both values are equal if they are known
-                    if relation_kong != '.' and relation_caesar != '.' and relation_kong != relation_caesar:
-                        correctness = False
+            if matrix_kong and matrix_caesar:
+                for line_kong, line_caesar in zip(matrix_kong, matrix_caesar):
+                    for relation_kong, relation_caesar in zip(line_kong, line_caesar):
+                        # Increments known relations
+                        if relation_kong != '.':
+                            number_relations_kong += 1
+                        if relation_caesar != '.':
+                            number_relations_caesar += 1
+                        # Check that both values are equal if they are known
+                        if relation_kong != '.' and relation_caesar != '.' and relation_kong != relation_caesar:
+                            correctness = False
 
-                # Write and show the corresponding row
-                row = [instance, number_relations_kong, time_kong, number_relations_caesar, time_caesar, correctness]
-                computations_writer.writerow(row)
-                print(' '.join(map(str, row)))
+            # Write and show the corresponding row
+            row = [instance, number_relations_kong, time_kong, number_relations_caesar, time_caesar, correctness]
+            computations_writer.writerow(row)
+            print(' '.join(map(str, row)))
+
+
+def decompress_matrix(matrix):
+    """ Decompress RLE matrix.
+    """
+    decompressed_matrix = []
+
+    for line in matrix:
+        if len(line) == 0:
+            break
+
+        new_line = []
+        past_value = -1
+        parse_multiplier = False
+        multiplier = ""
+
+        for value in line:           
+            if value == '(':
+                parse_multiplier = True
+            elif value == ')':
+                new_line.extend([past_value for _ in range(int(multiplier) - 1)])
+                parse_multiplier = False
+                multiplier = ""
+            elif parse_multiplier:
+                multiplier += value
+            else:
+                new_line.append(value)
+                past_value = value
+
+        decompressed_matrix.append(new_line)
+
+    return decompressed_matrix
 
 
 def main():
@@ -177,7 +212,7 @@ def main():
 
     reductions_converter(results.path_outputs)
     complete_computations_converter(results.path_outputs)
-    partial_computations_converter(results.path_output)
+    partial_computations_converter(results.path_outputs)
 
 
 if __name__ == "__main__":
