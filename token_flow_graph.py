@@ -60,7 +60,7 @@ class TFG:
             relation = '0'
         else:
             relation = '.'
-        self.matrix_initial = [[relation for j in range(i + 1)] for i in range(self.initial_net.number_places)]
+        self.matrix_initial = [[relation for _ in range(i + 1)] for i in range(self.initial_net.number_places)]
 
     def draw_TFG(self):
         """ Draw the Token Flow Graph.
@@ -130,7 +130,7 @@ class TFG:
         kind = equation.pop(0)
         nodes = [self.get_node(id_node) for id_node in equation]
 
-        # Redundance (Duplication or Shortcut)
+        # Redundance (Constant or Duplication or Shortcut)
         if kind == 'R':
             removed_place = nodes.pop(0)
             for node in nodes:
@@ -148,10 +148,12 @@ class TFG:
     def change_of_basis(self):
         """ Change of Basis method.
         """
-        # Propagate constant roots
+        # Propagate marked root
         self.token_propagation(self.marked_root, '1', get_children=True, memoize=True)
+        # Propagate dead root
         if not self.complete_matrix:
             self.token_propagation(self.dead_root, '0', get_children=True, memoize=True)
+            self.product(self.marked_root.children, self.dead_root.children, '0')
 
         # Propagate roots values (in the reduced net)
         for i in range(self.reduced_net.number_places):
@@ -163,7 +165,7 @@ class TFG:
                 # Product with marked root
                 self.product(self.marked_root.children, node.children, '1')
             
-            # Propagate the independency relation in case of partial matrix
+            # Propagate independency relations in case of partial matrix
             if not self.complete_matrix:
                 # Dead root
                 if self.matrix_reduced[i][i] == '0':
@@ -186,7 +188,7 @@ class TFG:
 
         return self.matrix_initial
 
-    def token_propagation(self, node, value='1', get_children=False, memoize=False):
+    def token_propagation(self, node, value, get_children=False, memoize=False):
         """ Token propagation:
             - propagate reachable places,
             - learn new concurrent/independent places,
@@ -203,18 +205,18 @@ class TFG:
             self.matrix_initial[order][order] = value
             children.append(node)
 
-        # If the node has some redundant nodes get the children
+        # If the node has some redundant nodes then get the children
         if node.redundant:
             get_children = True
 
         # Token propagation over the agglomerated nodes
         for agglomerated in node.agglomerated:
             new_children = self.token_propagation(agglomerated, value, get_children=get_children)
-            # Learn new independant places
-            if value == '0':
-                self.product(new_children, children, value)
+            # Learn new independent places
+            if not self.complete_matrix:
+                self.product(new_children, children, '0')
             children += new_children
-        
+
         # Token propagation on the redundancies
         for redundant in node.redundant:
             new_children = self.token_propagation(redundant, value, get_children=True)
@@ -232,7 +234,7 @@ class TFG:
         else:
             return []
 
-    def product(self, places1, places2, value='1'):
+    def product(self, places1, places2, value):
         """ Set the cartesian product between two lists of places
             to a value in the initial matrix. 
         """
