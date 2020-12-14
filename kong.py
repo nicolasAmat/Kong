@@ -187,12 +187,14 @@ def main():
         # Compute concurrency matrix of the reduced net
         log.info("> Compute the concurrency matrix of the reduced Petri net")
         matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        matrix_time = time.time() - start_time
         if matrix_reduced == '':
             exit_helper(results, f_reduced_net, f_reduced_pnml)
             return
     else:
         start_time = time.time()
         matrix_reduced = ''
+        matrix_time = 0
 
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
@@ -200,7 +202,9 @@ def main():
 
     # Show computation time
     if results.time:
-        print("# Computation time:", time.time() - start_time)
+        computation_time = time.time() - start_time
+        change_basis_time = computation_time - matrix_time
+        print("# Computation time: {} (Matrix: {} + Change of Basis: {})".format(computation_time, matrix_time, change_basis_time))
 
     exit_helper(results, f_reduced_net, f_reduced_pnml)
 
