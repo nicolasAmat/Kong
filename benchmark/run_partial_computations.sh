@@ -1,15 +1,17 @@
 #!/bin/bash
 
 # Script to run Kong and caesar.bdd on a given list of instances.
+# Computes partial matrices.
 
 
-# Set timeout
-TIMEOUT=3600
+# Set timeouts
+GLOBAL_TIMEOUT=3600
+BDD_TIMEOUT=60
 # Set max instances
 MAX=4
 # Set paths
 PATH_INPUTS="models/mcc.lip6.fr/archives/"
-PATH_OUTPUTS="OUTPUTS/computations/"
+PATH_OUTPUTS="OUTPUTS/partial_computations/"
 
 # Check if PNML2NUPN environment variable is defined
 if [[ -z ${PNML2NUPN} ]]; then
@@ -43,14 +45,17 @@ while IFS= read INSTANCE; do
     PATH_OUT_KONG="${PATH_OUTPUTS}${INSTANCE_NAME}_Kong.out"
     PATH_OUT_CAESAR="${PATH_OUTPUTS}${INSTANCE_NAME}_caesar.out"
 
+    # Export CAESAR_BDD_TIMEOUT
+    export CAESAR_BDD_TIMEOUT=${BDD_TIMEOUT}
+
     # Run kong
-    echo "timeout --kill-after=0 ${TIMEOUT} ../kong.py --time ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
+    echo "timeout --kill-after=0 ${GLOBAL_TIMEOUT} ../kong.py --time --timeout ${BDD_TIMEOUT} ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
 
     # Run PNML2NUPN
     echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE_NUPN
 
     # Run caesar
-    echo "timeout --kill-after=0 ${TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE_RUN
+    echo "timeout --kill-after=0 ${GLOBAL_TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUT_CAESAR}" >> $TEMP_FILE_RUN
 
 done <$LIST
 
