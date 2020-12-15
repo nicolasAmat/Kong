@@ -241,7 +241,8 @@ class TFG:
         for place1, place2 in itertools.product(places1, places2):
             place1 = self.initial_net.order[place1.id]
             place2 = self.initial_net.order[place2.id]
-            self.matrix_initial[max(place1, place2)][min(place1, place2)] = value
+            if value == '1' or self.matrix_initial[max(place1, place2)][min(place1, place2)] == '.':
+                self.matrix_initial[max(place1, place2)][min(place1, place2)] = value
 
 
 class Node:
