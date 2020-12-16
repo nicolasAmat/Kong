@@ -149,29 +149,34 @@ class TFG:
         """ Change of Basis method.
         """
         # Propagate marked root
-        self.token_propagation(self.marked_root, '1', get_children=True, memoize=True)
-        # Propagate dead root
+        self.token_propagation(self.marked_root, '1', memoize=True)
+        # Partial relation case
         if not self.complete_matrix:
-            self.token_propagation(self.dead_root, '0', get_children=True, memoize=True)
+            # Propagate dead root
+            self.token_propagation(self.dead_root, '0', memoize=True)
             self.product(self.marked_root.children, self.dead_root.children, '0')
 
-        # Propagate roots values (in the reduced net)
+        # Propagate roots values (from the reduced net)
         for i in range(self.reduced_net.number_places):
             node = self.get_node(self.reduced_net.places[i])
-            
+            value = self.matrix_reduced[i][i]
+
             # Reachable root
-            if self.matrix_reduced[i][i] == '1':
-                self.token_propagation(node, '1', get_children=True, memoize=True)
+            if value == '1':
+                self.token_propagation(node, value, memoize=True)
                 # Product with marked root
-                self.product(self.marked_root.children, node.children, '1')
-            
-            # Propagate independency relations in case of partial matrix
+                self.product(self.marked_root.children, node.children, value)
+
+            # Partial relation case
             if not self.complete_matrix:
-                # Dead root
-                if self.matrix_reduced[i][i] == '0':
-                    self.token_propagation(node, '0', get_children=True, memoize=True)
+                # Non necessary reachable root propagation
+                if value != '1':
+                    self.token_propagation(node, value, memoize=True)
                 # Product with dead root
                 self.product(self.dead_root.children, node.children, '0')
+                # Product with marked root
+                if value == '0':
+                    self.product(self.marked_root.children, node.children, '0')
 
         # Propagate the concurrency relation from the reduced matrix
         for i, line in enumerate(self.matrix_reduced):
@@ -180,15 +185,16 @@ class TFG:
                 if concurrency == '1':
                     node1, node2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
                     self.product(node1.children, node2.children, '1')
-                # In case of partial matrix
-                # If two root are independent then each pair of children are independent
+                # Partial relation case
+                # If two root are independent then each pair of children are independent,
+                # except for the intersection that is managed by the product method
                 if not self.complete_matrix and concurrency == '0':
                     node1, node2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
                     self.product(node1.children, node2.children, '0')
 
         return self.matrix_initial
 
-    def token_propagation(self, node, value, get_children=False, memoize=False):
+    def token_propagation(self, node, value, memoize=False):
         """ Token propagation:
             - propagate reachable places,
             - learn new concurrent/independent places,
@@ -198,30 +204,29 @@ class TFG:
         children = []
 
         # If the node is a place from the initial net:
-        # - add the value in the concurrency matrix (reachable / dead),
+        # - add the value (not '.') in the concurrency matrix (reachable / dead),
         # - add to the children list.
         if not node.additional:
-            order = self.initial_net.order[node.id]
-            self.matrix_initial[order][order] = value
+            if value != '.':
+                order = self.initial_net.order[node.id]
+                self.matrix_initial[order][order] = value
             children.append(node)
-
-        # If the node has some redundant nodes then get the children
-        if node.redundant:
-            get_children = True
 
         # Token propagation over the agglomerated nodes
         for agglomerated in node.agglomerated:
-            new_children = self.token_propagation(agglomerated, value, get_children=get_children)
-            # Learn new independent places
+            new_children = self.token_propagation(agglomerated, value)
+            # Partial relation case
             if not self.complete_matrix:
+                # Learn new independent places
                 self.product(new_children, children, '0')
             children += new_children
 
         # Token propagation on the redundancies
         for redundant in node.redundant:
-            new_children = self.token_propagation(redundant, value, get_children=True)
+            new_children = self.token_propagation(redundant, value)
             # Learn new concurrent places
-            self.product(new_children, children, value)
+            if value != '.':
+                self.product(new_children, children, value)
             children += new_children
 
         # Children memoization
@@ -229,10 +234,7 @@ class TFG:
             node.children = children
 
         # Return children
-        if get_children:
-            return children
-        else:
-            return []
+        return children
 
     def product(self, places1, places2, value):
         """ Set the cartesian product between two lists of places
@@ -241,6 +243,7 @@ class TFG:
         for place1, place2 in itertools.product(places1, places2):
             place1 = self.initial_net.order[place1.id]
             place2 = self.initial_net.order[place2.id]
+            # Intersection management (cf. change_of_basis method)
             if value == '1' or self.matrix_initial[max(place1, place2)][min(place1, place2)] == '.':
                 self.matrix_initial[max(place1, place2)][min(place1, place2)] = value
 
