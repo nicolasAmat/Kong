@@ -210,7 +210,8 @@ class TFG:
         if not node.additional:
             if value != '.':
                 order = self.initial_net.order[node.id]
-                self.matrix_initial[order][order] = value
+                if self.matrix_initial[order][order] != '1':
+                    self.matrix_initial[order][order] = value
             children.append(node)
 
         # Token propagation over the agglomerated nodes
