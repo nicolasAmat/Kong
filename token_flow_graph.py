@@ -45,8 +45,8 @@ class TFG:
         # Nodes initialization
         self.nodes = {}
         self.init_nodes()
-        self.dead_root = self.get_node('0')
         self.marked_root = self.get_node('1')
+        self.dead_root = self.get_node('0')
 
         # Parse the system of equations and build the Token Flow Graph
         self.parse_system(filename, show_equations)
@@ -154,6 +154,7 @@ class TFG:
         if not self.complete_matrix:
             # Propagate dead root
             self.token_propagation(self.dead_root, '0', memoize=True)
+            # Product with marked root
             self.product(self.marked_root.children, self.dead_root.children, '0')
 
         # Propagate roots values (from the reduced net)
@@ -186,8 +187,8 @@ class TFG:
                     node1, node2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
                     self.product(node1.children, node2.children, '1')
                 # Partial relation case
-                # If two root are independent then each pair of children are independent,
-                # except for the intersection that is managed by the product method
+                # (If two roots are independent then each pair of children are independent too,
+                # except for the intersection that is managed by the product method.)
                 if not self.complete_matrix and concurrency == '0':
                     node1, node2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
                     self.product(node1.children, node2.children, '0')
@@ -196,7 +197,7 @@ class TFG:
 
     def token_propagation(self, node, value, memoize=False):
         """ Token propagation:
-            - propagate reachable places,
+            - propagate reachable/dead places,
             - learn new concurrent/independent places,
             - memoize children.
         """
@@ -221,10 +222,10 @@ class TFG:
                 self.product(new_children, children, '0')
             children += new_children
 
-        # Token propagation on the redundancies
+        # Token propagation over the redundant nodes
         for redundant in node.redundant:
             new_children = self.token_propagation(redundant, value)
-            # Learn new concurrent places
+            # Learn new concurrent/independent places
             if value != '.':
                 self.product(new_children, children, value)
             children += new_children
@@ -243,14 +244,14 @@ class TFG:
         for place1, place2 in itertools.product(places1, places2):
             place1 = self.initial_net.order[place1.id]
             place2 = self.initial_net.order[place2.id]
-            # Intersection management (cf. change_of_basis method)
+            # DAGs intersection management (cf. change_of_basis method)
             if value == '1' or self.matrix_initial[max(place1, place2)][min(place1, place2)] == '.':
                 self.matrix_initial[max(place1, place2)][min(place1, place2)] = value
 
 
 class Node:
     """
-    Place or additional variable.
+    Node: place or additional variable.
 
     A node is defined by:
     - an identifier,
