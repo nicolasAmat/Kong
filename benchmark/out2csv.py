@@ -66,7 +66,7 @@ def complete_computations_converter(path_outputs):
                 matrix_kong = None
                 if kong:
                     # Round up reduction time (2 decimals)
-                    time_kong = math.ceil(float(kong[-1].split(': ')[1]) * 100) / 100
+                    time_kong = math.ceil(float(kong[-1].split(': ')[1].split(' ')[0]) * 100) / 100
                     # Kong matrix
                     matrix_kong = kong[:-1]
 
@@ -104,9 +104,9 @@ def partial_computations_converter(path_outputs):
     # Write computations data in `partial_computations.csv`
     with open('{}/partial_computations.csv'.format(path_outputs), 'w') as csv_computations:
         computations_writer = csv.writer(csv_computations)
-        computations_writer.writerow(['INSTANCE', 'NUMBER_RELATIONS_KONG', 'TIME_KONG', 'NUMBER_RELATIONS_CAESAR', 'TIME_CAESAR', 'CORRECTNESS'])
+        computations_writer.writerow(['INSTANCE', 'RELATION_SIZE', 'NUMBER_RELATIONS_KONG', 'TIME_KONG', 'NUMBER_RELATIONS_CAESAR', 'TIME_CAESAR', 'CORRECTNESS'])
 
-        # Iterate over Kong `.out` files in `computations/` subdirectory
+        # Iterate over Kong `.out` files in `partial_computations/` subdirectory
         for kong_outfile in glob.glob("{}/partial_computations/*_Kong.out".format(path_outputs)):
 
             # Check if the corresponding caesar `.out` file exists
@@ -125,7 +125,7 @@ def partial_computations_converter(path_outputs):
                 matrix_kong = None
                 if kong:
                     # Round up reduction time (2 decimals)
-                    time_kong = math.ceil(float(kong[-1].split(': ')[1]) * 100) / 100
+                    time_kong = math.ceil(float(kong[-1].split(': ')[1].split(' ')[0]) * 100) / 100
                     # Kong matrix
                     matrix_kong = decompress_matrix(kong[:-1])
 
@@ -136,18 +136,21 @@ def partial_computations_converter(path_outputs):
                 matrix_caesar = None
                 if len(caesar) > 1:
                     time_data = caesar[-2].split('user')
-                    if len(time_data) > 1:
+                    if 'caesar.bdd' in caesar[0]:
+                        caesar.pop(0)
+                    if len(time_data) > 1 and caesar[0] in ['.', '0', '1']:
                         # Caesar time
                         time_caesar = float(time_data[0])
                         # Caesar matrix
-                        if 'caesar.bdd' in caesar[0]:
-                            caesar.pop(0)
                         matrix_caesar = decompress_matrix(caesar[:-2])
 
             # Get correctness and number of computed relations
             correctness = True
-            number_relations_kong, number_relations_caesar = 0, 0
+            relation_size, number_relations_kong, number_relations_caesar = 0, 0, 0
+
             if matrix_kong and matrix_caesar:
+                # Relation size (N*(N+1)/2))
+                relation_size = int(len(matrix_kong) * (len(matrix_kong) + 1) / 2)
                 for line_kong, line_caesar in zip(matrix_kong, matrix_caesar):
                     for relation_kong, relation_caesar in zip(line_kong, line_caesar):
                         # Increments known relations
@@ -158,9 +161,23 @@ def partial_computations_converter(path_outputs):
                         # Check that both values are equal if they are known
                         if relation_kong != '.' and relation_caesar != '.' and relation_kong != relation_caesar:
                             correctness = False
+            elif matrix_kong:
+                relation_size = int(len(matrix_kong) * (len(matrix_kong) + 1) / 2)
+                for line_kong in matrix_kong:
+                    for relation_kong in line_kong:
+                        # Increments known relations
+                        if relation_kong != '.':
+                            number_relations_kong += 1
+            elif matrix_caesar:
+                relation_size = int(len(matrix_caesar) * (len(matrix_caesar) + 1) / 2)
+                for line_caesar in matrix_caesar:
+                    for relation_caesar in line_caesar:
+                        # Increments known relations
+                        if relation_caesar != '.':
+                            number_relations_caesar += 1
 
             # Write and show the corresponding row
-            row = [instance, number_relations_kong, time_kong, number_relations_caesar, time_caesar, correctness]
+            row = [instance, relation_size, number_relations_kong, time_kong, number_relations_caesar, time_caesar, correctness]
             computations_writer.writerow(row)
             print(' '.join(map(str, row)))
 
