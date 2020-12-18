@@ -96,9 +96,9 @@ def main():
                         type=str,
                         help='set time limit for the BDD-based exploration (caesar.bdd)')
 
-    parser.add_argument('-pl', '--place_names',
+    parser.add_argument('-pl', '--place-names',
                         action='store_true',
-                        help='display place names')
+                        help='show place names')
 
     parser.add_argument('-t', '--time',
                         action='store_true',
