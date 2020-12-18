@@ -7,6 +7,7 @@ Kong is a tool to compute the concurrency relation of a Petri using net reductio
 ## Requirements
 
 + Python >+ 3.5
++ [graphviz](https://pypi.org/project/graphviz/)
 + caesar.bdd from the [CADP Toolbox](https://cadp.inria.fr/)
 + reduce tool from the [TINA Toolbox](http://projects.laas.fr/tina/)
 + [PNML2NUPN](https://github.com/lip6/pnml2nupn) tool
@@ -27,8 +28,8 @@ You can list all the options by using the *help* option:
 ```
 $> ./kong.py --help
 usage: kong.py [-h] [--version] [-v] [--save-reduced | --reduced REDUCED_NET]
-               [-pl] [-t] [--reduction-ratio] [--show-equations]
-               [--draw-graph] [--show-reduced-matrix]
+               [--timeout TIMEOUT] [-pl] [-t] [--reduction-ratio]
+               [--show-equations] [--draw-graph] [--show-reduced-matrix]
                filename
 
 Koncurrent Places Squasher
@@ -43,7 +44,9 @@ optional arguments:
   --save-reduced, -sr   save the reduced net
   --reduced REDUCED_NET, -r REDUCED_NET
                         reduced Petri Net (.net format)
-  -pl, --place_names    display place names
+  --timeout TIMEOUT     set time limit for the BDD-based exploration
+                        (caesar.bdd)
+  -pl, --place-names    show place names
   -t, --time            show the computation time
   --reduction-ratio     show the reduction ratio
   --show-equations      show the reduction equations
