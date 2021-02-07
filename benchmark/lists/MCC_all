@@ -544,11 +544,6 @@ Sudoku/PT/Sudoku-PT-B-N09.pnml
 Sudoku/PT/Sudoku-PT-A-N14.pnml
 TokenRing/PT/TokenRing-40-unfolded.pnml
 TokenRing/PT/TokenRing-50-unfolded.pnml
-Philosophers.old/PT/Philosophers-1000.pnml
-Philosophers.old/PT/Philosophers-500.pnml
-Philosophers.old/PT/Philosophers-2000.pnml
-Philosophers.old/PT/Philosophers-10000.pnml
-Philosophers.old/PT/Philosophers-5000.pnml
 Railroad/PT/railroad-050-pt.pnml
 Railroad/PT/railroad-100-pt.pnml
 Peterson/PT/Peterson-7.pnml
@@ -580,9 +575,9 @@ ViralEpidemic/PT/viral-02-1-1-12.pnml
 ViralEpidemic/PT/viral-04-1-1-04.pnml
 ViralEpidemic/PT/viral-03-1-1-02.pnml
 ViralEpidemic/PT/viral-04-1-1-03.pnml
-Eratosthenes/PT/eratosthenes-100.pnml 
-Eratosthenes/PT/eratosthenes-050.pnml 
-Eratosthenes/PT/eratosthenes-010.pnml 
-Eratosthenes/PT/eratosthenes-500.pnml 
-Eratosthenes/PT/eratosthenes-200.pnml 
-Eratosthenes/PT/eratosthenes-020.pnml 
+Eratosthenes/PT/eratosthenes-100.pnml
+Eratosthenes/PT/eratosthenes-050.pnml
+Eratosthenes/PT/eratosthenes-010.pnml
+Eratosthenes/PT/eratosthenes-500.pnml
+Eratosthenes/PT/eratosthenes-200.pnml
+Eratosthenes/PT/eratosthenes-020.pnml
