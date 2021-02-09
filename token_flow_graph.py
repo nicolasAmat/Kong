@@ -116,7 +116,7 @@ class TFG:
                     for line in re.split('\n+', content.group())[1:-1]:
                         if show_equations:
                             print(line)
-                        self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace('<=', '').replace('=', '').replace('+', '').replace('{', '').replace('}', '')))
+                        self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace(' <= ', ' ').replace(' = ', ' ').replace(' + ', ' ').replace('{', '').replace('}', '')))
             fp.close()
 
         except FileNotFoundError as e:
