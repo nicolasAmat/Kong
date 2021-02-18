@@ -83,7 +83,7 @@ def complete_computations_converter(path_outputs):
                 caesar = out_caesar.read().splitlines()
                 time_caesar = np.nan
                 matrix_caesar = None
-                if caesar:
+                if caesar and len(caesar) > 1:
                     time_data = caesar[-2].split('user')
                     # Check matrix completeness
                     complete = True
