@@ -95,6 +95,9 @@ class ConcurrencyMatrix:
             """ Display concurrency matrix.
                 (with run-length encoding)
             """
+            if not net.places:
+                return
+
             if place_names:
                 max_len = max([len(pl) for pl in net.places])
 
