@@ -73,13 +73,13 @@ class TFG:
             tfg.node(node.id)
 
         # Draw redundant arcs
-        tfg.attr('edge', arrowtail='dot')
+        tfg.attr('edge', arrowhead='dotnormal', arrowtail='none')
         for node in self.nodes.values():
             for redundant in node.redundant:
                 tfg.edge(node.id, redundant.id, dir='both')
 
         # Draw agglomerated arcs
-        tfg.attr('edge', arrowtail='odot')
+        tfg.attr('edge', arrowhead='normal', arrowtail='odot')
         for node in self.nodes.values():
             for agglomerated in node.agglomerated:
                 tfg.edge(node.id, agglomerated.id, dir='both')
