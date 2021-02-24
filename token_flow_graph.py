@@ -264,7 +264,7 @@ class TFG:
             else:
                 # If the place is not dead, set the dead columns to `0`
                 for dead_column in dead_columns:
-                    row[i][dead_column] = '0'            
+                    row[dead_column] = '0'      
 
         return self.matrix_initial
 
