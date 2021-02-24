@@ -1,4 +1,4 @@
-# Kong: Koncurrent Places Squasher
+# Kong: Koncurrent places Grinder
 
 ## About
 
@@ -32,7 +32,7 @@ usage: kong.py [-h] [--version] [-v] [--save-reduced | --reduced REDUCED_NET]
                [--show-equations] [--draw-graph] [--show-reduced-matrix]
                filename
 
-Koncurrent Places Squasher
+Koncurrent places Grinder
 
 positional arguments:
   filename              input Petri net (.pnml format)

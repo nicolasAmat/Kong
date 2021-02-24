@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Kong: Koncurrent Places Squasher
+Kong: Koncurrent places Grinder
 
 Input file format: .pnml
 
@@ -63,7 +63,7 @@ def main():
     """ Main Function.
     """
     # Arguments parser
-    parser = argparse.ArgumentParser(description='Koncurrent Places Squasher')
+    parser = argparse.ArgumentParser(description='Koncurrent places Grinder')
     parser.add_argument('--version',
                         action='version',
                         version='%(prog)s 1.0.0',
