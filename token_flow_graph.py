@@ -187,7 +187,7 @@ class TFG:
             root = self.get_node(self.reduced_net.places[i])
             value = self.matrix_reduced[i][i]
 
-            # Reachable root
+            # Alive root
             if value == '1':
                 self.token_propagation(root, value, memoize=True)
                 # Product with non-dead roots
@@ -229,6 +229,10 @@ class TFG:
 
             # Queue initialization
             queue = deque()
+            # Add non-dead roots
+            for non_dead_root in self.non_dead_roots:
+                queue.append(non_dead_root)
+            # Add places from reduced net
             for place_id in self.reduced_net.places:
                 queue.append(self.get_node(place_id))
 
@@ -236,14 +240,15 @@ class TFG:
                 # Get first node in the queue
                 node = queue.popleft()
 
-                # Iterate over the intersection of the independent places from the parents
-                if node.parents:
-                    for independent_node in set.intersection(*[parent.independent for parent in node.parents]): 
+                # Iterate over the intersection of the independent places from the non-dead parents parents
+                non_dead_parents = [parent.independent for parent in node.parents if not parent.dead]
+                if non_dead_parents:
+                    for independent_node in set.intersection(*non_dead_parents): 
                         # Add the independency relation in nodes
                         node.independent.add(independent_node)
                         independent_node.independent.add(node)
 
-                # Add the independency relation in the matrix for places from the initial net
+                # Add the independency relations in the matrix for places from the initial net
                 if not node.additional:
                     self.product([node], [independent_node for independent_node in node.independent if not independent_node.additional], '0' )
 
@@ -279,14 +284,15 @@ class TFG:
 
         # Case: partial relation and parents already propagated
         if not self.complete_matrix and all(parent.propagated for parent in node.parents):
-            
+
             # Update `propagated` flag of the node
             node.propagated = True
 
             # The products of the parents' predecessors are independent
-            # Can be treat as change_of_basis
             for parent_1, parent_2 in itertools.combinations(node.parents, 2):
-                self.product(parent_1.predecessors, parent_2.predecessors, '0')
+                for pred_1, pred_2 in itertools.product(parent_1.predecessors, parent_2.predecessors):
+                    pred_1.independent.add(pred_2)
+                    pred_2.independent.add(pred_1)
 
             # Set the predecessors of the node
             node.predecessors = [predecessor for parent in node.parents for predecessor in parent.predecessors]
@@ -294,7 +300,7 @@ class TFG:
             # Update `dead` flag
             if value == '0':
                 # If all parents are dead set the node to dead, otherwise cannot propagate a dead value anymore
-                if all(parent == '0' for parent in node.parents):
+                if all(parent.dead for parent in node.parents):
                     node.dead = True
                 else:
                     value = '.'
@@ -307,7 +313,7 @@ class TFG:
                 order = self.initial_net.order[node.id]
                 self.matrix_initial[order][order] = value
             
-            # Add the node to the successors and its predecessors list
+            # Add the node to the successors and predecessors lists
             successors.append(node)
             node.predecessors.append(node)
 
