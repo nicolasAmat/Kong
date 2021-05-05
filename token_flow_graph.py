@@ -33,7 +33,7 @@ from graphviz import Graph
 
 class TFG:
     """
-    Token Flow Graph method.
+    Token Flow Graph.
     """
 
     def __init__(self, filename, initial_net, reduced_net, complete_matrix, matrix_reduced=[], show_equations=False, draw_graph=False):
@@ -46,7 +46,7 @@ class TFG:
         # Nodes initialization
         self.nodes = {}
         self.init_nodes()
-    
+
         # Non-dead roots
         self.non_dead_roots = []
         self.counter_non_dead_roots = 0
