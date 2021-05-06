@@ -130,6 +130,19 @@ def main():
         log.basicConfig(format="%(message)s")
         stdout = subprocess.DEVNULL
 
+    # Check if extension is `.nupn`
+    if results.infile.lower().endswith('.nupn'):
+        log.info("> Convert '.nupn' to '.pnml'")
+
+        pnml_file = tempfile.NamedTemporaryFile(suffix='.pnml')
+        net_file = tempfile.NamedTemporaryFile(suffix='.net')
+
+        subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=pnml_file)
+        subprocess.run(["ndrio", pnml_file.name, net_file.name])
+        subprocess.run(["ndrio", net_file.name, pnml_file.name])
+
+        results.infile = pnml_file.name
+
     # Read input net
     log.info("> Read the input Petri net")
     initial_net = PetriNet(results.infile)
