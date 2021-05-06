@@ -51,11 +51,18 @@ def transition_renamer(filename):
         file.write(filedata)
 
 
-def exit_helper(results, f_reduced_net, f_reduced_pnml):
+def exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml):
     """ Close temporary files.
     """
+    if f_pnml is not None:
+        f_pnml.close()
+
+    if f_net is not None:
+        f_net.close()
+
     if not (results.save_reduced or results.reduced_net):
         f_reduced_net.close()
+
     f_reduced_pnml.close()
 
 
@@ -131,17 +138,18 @@ def main():
         stdout = subprocess.DEVNULL
 
     # Check if extension is `.nupn`
+    f_pnml, f_net = None, None
     if results.infile.lower().endswith('.nupn'):
         log.info("> Convert '.nupn' to '.pnml'")
 
-        pnml_file = tempfile.NamedTemporaryFile(suffix='.pnml')
-        net_file = tempfile.NamedTemporaryFile(suffix='.net')
+        f_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
+        f_net = tempfile.NamedTemporaryFile(suffix='.net')
 
-        subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=pnml_file)
-        subprocess.run(["ndrio", pnml_file.name, net_file.name])
-        subprocess.run(["ndrio", net_file.name, pnml_file.name])
+        subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=f_pnml)
+        subprocess.run(["ndrio", f_pnml.name, f_net.name])
+        subprocess.run(["ndrio", f_net.name, f_pnml.name])
 
-        results.infile = pnml_file.name
+        results.infile = f_pnml.name
 
     # Read input net
     log.info("> Read the input Petri net")
@@ -177,15 +185,13 @@ def main():
     # Display reduction ratio if enabled
     if results.reduction_ratio:
         print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
-        exit_helper(results, f_reduced_net, f_reduced_pnml)
-        return
 
     if reduced_net.places:
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
         PNML2NUPN = os.getenv('PNML2NUPN')
         if not PNML2NUPN:
-            exit_helper(results, f_reduced_net, f_reduced_pnml)
+            exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
             sys.exit("Environment variable PNML2NUPN not defined!")
         subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
 
@@ -202,7 +208,7 @@ def main():
         matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
         matrix_time = time.time() - start_time
         if matrix_reduced == '':
-            exit_helper(results, f_reduced_net, f_reduced_pnml)
+            exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
             return
     else:
         start_time = time.time()
@@ -219,7 +225,7 @@ def main():
         change_basis_time = computation_time - matrix_time
         print("# Computation time: {} (Matrix: {} + Change of Basis: {})".format(computation_time, matrix_time, change_basis_time))
 
-    exit_helper(results, f_reduced_net, f_reduced_pnml)
+    exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
 
 if __name__ == '__main__':
     sys.setrecursionlimit(10000)
