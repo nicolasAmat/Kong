@@ -141,19 +141,14 @@ def main():
     f_pnml, f_net = None, None
     if results.infile.lower().endswith('.nupn'):
         log.info("> Convert '.nupn' to '.pnml'")
-
         f_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
-        f_net = tempfile.NamedTemporaryFile(suffix='.net')
-
         subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=f_pnml)
-        subprocess.run(["ndrio", f_pnml.name, f_net.name])
-        subprocess.run(["ndrio", f_net.name, f_pnml.name])
-
         results.infile = f_pnml.name
 
     # Read input net
     log.info("> Read the input Petri net")
-    initial_net = PetriNet(results.infile)
+    initial_net = PetriNet(results.infile, initial_net=True)
+    results.infile = initial_net.filename
 
     # Manage reduced net
     f_reduced_net = None
