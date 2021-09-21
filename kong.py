@@ -83,7 +83,7 @@ def main():
     parser.add_argument('infile',
                         metavar='filename',
                         type=str,
-                        help='input Petri net (.pnml format)')
+                        help='input Petri net (.pnml or .nupn format)')
 
     group_reductions = parser.add_mutually_exclusive_group()
 

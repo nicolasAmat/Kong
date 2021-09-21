@@ -35,7 +35,7 @@ usage: kong.py [-h] [--version] [-v] [--save-reduced | --reduced REDUCED_NET]
 Koncurrent places Grinder
 
 positional arguments:
-  filename              input Petri net (.pnml format)
+  filename              input Petri net (.pnml or .nupn format)
 
 optional arguments:
   -h, --help            show this help message and exit
