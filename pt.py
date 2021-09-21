@@ -57,7 +57,7 @@ class PetriNet:
         root = tree.getroot()
 
         for place_node in root.iter(xmlns + "place"):
-            place = place_node.find(xmlns + "name/" + xmlns + "text").text
+            place = place_node.attrib['id']
             self.places.append(place)
             self.order[place] = self.number_places
             self.number_places += 1
