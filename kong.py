@@ -38,19 +38,6 @@ from concurrency_matrix import ConcurrencyMatrix
 from pt import PetriNet
 
 
-def transition_renamer(filename):
-    """ Rename transitions in a .net file
-        to avoid similar names between transitions and places.
-    """
-    with open(filename, 'r') as file:
-        filedata = file.read()
-
-    filedata = filedata.replace('tr ', 'tr T_').replace('T_{','{T_')
-
-    with open(filename, 'w') as file:
-        file.write(filedata)
-
-
 def exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml):
     """ Close temporary files.
     """
@@ -165,8 +152,6 @@ def main():
         subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
         if results.time:
             print("# Reduction time:", time.time() - start_time)
-    if not results.reduced_net:
-        transition_renamer(reduced_net_filename)
 
     # Convert reduced net to .pnml format
     log.info("> Convert the reduced Petri net to '.pnml' format")
