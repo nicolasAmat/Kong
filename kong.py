@@ -174,6 +174,12 @@ def main():
             exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
             sys.exit("Environment variable PNML2NUPN not defined!")
         subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
+        reduced_nupn = f_reduced_pnml.name.replace('.pnml', '.nupn')
+
+        # If the initial is safe, add the information into the .nupn file
+        if initial_net.safe:
+            with open(reduced_nupn, 'r') as nupn: net = nupn.read()
+            with open(reduced_nupn, 'w') as nupn_pragma_safe: nupn_pragma_safe.write("!unit_safe\n" + net)
 
         # Set BDD exploration time limit
         if results.timeout:
@@ -185,7 +191,7 @@ def main():
 
         # Compute concurrency matrix of the reduced net
         log.info("> Compute the concurrency matrix of the reduced Petri net")
-        matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", f_reduced_pnml.name.replace('.pnml', '.nupn')], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE).stdout.decode('utf-8')
         matrix_time = time.time() - start_time
         if matrix_reduced == '':
             exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)

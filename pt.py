@@ -41,6 +41,8 @@ class PetriNet:
         self.order = {}
         self.number_places = 0
 
+        self.safe = False
+
         self.parse_net(filename, initial_net)
 
     def __str__(self):
@@ -84,7 +86,11 @@ class PetriNet:
             self.number_places += 1
 
         if initial_net:
-            # If initial net, write it to a temporary file
+            # Check is the net is known to be safe
+            structure = root.find(xmlns + "net/" + xmlns  +  "page/" + xmlns + "toolspecific/" + xmlns + "structure")
+            self.safe = structure and structure.attrib["safe"] == "true"
+
+            # Write the net to a temporary file
             self.filename = tempfile.NamedTemporaryFile(suffix='.pnml').name
             tree.write(self.filename, encoding="utf-8", xml_declaration=True)
 
