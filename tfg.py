@@ -96,7 +96,6 @@ class TFG:
         """ Create a node for each place from the initial net.
         """
         for place in self.initial_net.places:
-            self.nodes[place] = Node(place)
 
     def get_node(self, id_node):
         """ Return the node that corresponds to the id if it exists,

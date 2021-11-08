@@ -34,7 +34,7 @@ import sys
 import tempfile
 import time
 
-from concurrency_matrix import ConcurrencyMatrix
+from concurrent_places import ConcurrentPlaces
 from pt import PetriNet
 
 
@@ -203,7 +203,7 @@ def main():
 
     # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
     log.info("> Change of basis")
-    concurrency_matrix = ConcurrencyMatrix(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names, results.show_equations, results.draw_graph, results.show_reduced_matrix)
+    concurrent_places = ConcurrentPlaces(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names, results.show_equations, results.draw_graph, results.show_reduced_matrix)
 
     # Show computation time
     if results.time:

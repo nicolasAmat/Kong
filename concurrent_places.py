@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-
 """
-Concurrency Matrix Module
+Concurrent Places Module
 
 Input file format: caesar.bdd format (half matrix with run-lenght encoding),
                    `reduced` output format (.net).
@@ -25,12 +23,12 @@ along with Kong. If not, see <https://www.gnu.org/licenses/>.
 __author__ = "Nicolas AMAT, LAAS-CNRS"
 __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
-from token_flow_graph import TFG
+from tfg import TFG
 
 
-class ConcurrencyMatrix:
+class ConcurrentPlaces:
     """ Change of basis of the concurrency matrix.
     """
 
