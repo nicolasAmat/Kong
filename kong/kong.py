@@ -184,8 +184,9 @@ def main():
         # Set BDD exploration time limit
         if results.timeout:
             os.environ['CAESAR_BDD_TIMEOUT'] = results.timeout
+            log.info("> Set environment variable CAESAR_BDD_TIMEOUT to `%s'", os.environ['CAESAR_BDD_TIMEOUT'])
         elif os.getenv('CAESAR_BDD_TIMEOUT'):
-            del os.environ['CAESAR_BDD_TIMEOUT']
+            log.warning("> Environment variable CAESAR_BDD_TIMEOUT is already set to `%s'", os.environ['CAESAR_BDD_TIMEOUT'])
 
         start_time = time.time()
 
