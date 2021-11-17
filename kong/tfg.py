@@ -28,7 +28,10 @@ import itertools
 import re
 from collections import deque
 
-from graphviz import Graph
+try:
+    from graphviz import Graph
+except ImportError:
+    Graph = None
 
 
 class TFG:
@@ -71,6 +74,7 @@ class TFG:
     def draw_TFG(self):
         """ Draw the Token Flow Graph.
         """
+        assert Graph is not None, "Could not import the package `graphviz'"
         tfg = Graph('TFG')
 
         # Draw nodes
