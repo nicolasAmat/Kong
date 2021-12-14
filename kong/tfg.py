@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Token Flow Graph Module
 
@@ -28,7 +26,10 @@ import itertools
 import re
 from collections import deque
 
-from graphviz import Graph
+try:
+    from graphviz import Graph
+except ImportError:
+    Graph = None
 
 
 class TFG:
@@ -36,7 +37,7 @@ class TFG:
     Token Flow Graph.
     """
 
-    def __init__(self, filename, initial_net, reduced_net, complete_matrix, matrix_reduced=[], show_equations=False, draw_graph=False):
+    def __init__(self, filename, initial_net, reduced_net, show_equations=False):
         """ Initializer.
         """
         # Petri nets
@@ -56,21 +57,12 @@ class TFG:
 
         # Parse the system of equations and build the Token Flow Graph
         self.parse_system(filename, show_equations)
-        if draw_graph:
-            self.draw_TFG()
 
-        # Matrices initialization
-        self.complete_matrix = complete_matrix
-        self.matrix_reduced = matrix_reduced
-        if self.complete_matrix:
-            relation = '0'
-        else:
-            relation = '.'
-        self.matrix_initial = [[relation for _ in range(i + 1)] for i in range(self.initial_net.number_places)]
-
-    def draw_TFG(self):
+    def draw_graph(self):
         """ Draw the Token Flow Graph.
         """
+        assert Graph is not None, "Could not import the package `graphviz'"
+
         tfg = Graph('TFG')
 
         # Draw nodes
@@ -96,6 +88,8 @@ class TFG:
         """ Create a node for each place from the initial net.
         """
         for place in self.initial_net.places:
+            new_node = Node(place)
+            self.nodes[place] = new_node
 
     def get_node(self, id_node):
         """ Return the node that corresponds to the id if it exists,
@@ -130,7 +124,6 @@ class TFG:
                         if show_equations:
                             print(line)
                         self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace(' <= ', ' ').replace(' = ', ' ').replace(' + ', ' ').replace('{', '').replace('}', '')))
-            fp.close()
 
         except FileNotFoundError as e:
             exit(e)
@@ -167,112 +160,44 @@ class TFG:
 
         raise ValueError("Invalid reduction equation")
 
-    def change_of_basis(self):
-        """ Change of Basis method.
+    def units_projection(self):
+        """ Project the units.
         """
-        # Propagate non-dead roots
-        for non_dead_root in self.non_dead_roots:
-            self.token_propagation(non_dead_root, '1', memoize=True)
-        
-        # Case: partial relation
-        if not self.complete_matrix:
-            # Propagate dead root
-            self.token_propagation(self.dead_root, '0', memoize=True)
+        # Dict associating each place of the reduced net, to the optimal units
+        minimal_units = {}
 
-        # Propagate roots values (from the reduced net)
-        for i in range(self.reduced_net.number_places):
-
-            # Get corresponding root and matrix value
-            root = self.get_node(self.reduced_net.places[i])
-            value = self.matrix_reduced[i][i]
-
-            # Alive root
-            if value == '1':
-                self.token_propagation(root, value, memoize=True)
-                # Product with non-dead roots
-                for non_dead_root in self.non_dead_roots:
-                    self.product(non_dead_root.successors, root.successors, value)
-
-            # Case: partial relation and root not already propagated
-            if not self.complete_matrix and value != '1':
-                self.token_propagation(root, value, memoize=True)
-    
-        # Product with non-dead roots
-        for non_dead_root_1, non_dead_root_2 in itertools.combinations(self.non_dead_roots, 2):
-            self.product(non_dead_root_1.successors, non_dead_root_2.successors, '1')
-
-        # Propagate the concurrency relation from the reduced matrix
-        for i, line in enumerate(self.matrix_reduced):
+        # Iterate over the places of the reduced net
+        for place in self.reduced_net.places:
+            # Find leaves
+            leaves = set()
+            self.explore_leaves(self.get_node(place), leaves)
             
-            # Skip dead roots
-            if line[i] == '0':
-                continue
-            
-            # Only iterate over the lower triangle (symmetric relation)
-            for j, concurrency in enumerate(line[:-1]):
+            # Compute optimal units
+            minimal_units[place] = self.initial_net.NUPN.root.minimal_units(leaves)
 
-                # The product of the concurrent roots' successors is included in the concurrency relation
-                if concurrency == '1':
-                    root_1, root_2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
-                    self.product(root_1.successors, root_2.successors, '1')
+        # Transfer the NUPN from the initial net to the reduced net
+        self.reduced_net.NUPN, self.initial_net.NUPN = self.initial_net.NUPN, None
 
-                # Case: partial relation
-                if not self.complete_matrix and concurrency == '0':
-                    # Set roots as independent
-                    root_1, root_2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
-                    root_1.independent.add(root_2)
-                    root_2.independent.add(root_1)
+        # Clean the NUPN
+        self.reduced_net.NUPN.root.initialize_places()
 
-        # Case: partial relation
-        if not self.complete_matrix:
+        # Project units
+        for place, units in minimal_units.items():
+            self.reduced_net.NUPN.add_place(place, units)
 
-            # Queue initialization
-            queue = deque()
-            # Add non-dead roots
-            for non_dead_root in self.non_dead_roots:
-                queue.append(non_dead_root)
-            # Add places from reduced net
-            for place_id in self.reduced_net.places:
-                queue.append(self.get_node(place_id))
+        # Simplify the projected NUPN
+        self.reduced_net.NUPN.simplification()
 
-            while queue:
-                # Get first node in the queue
-                node = queue.popleft()
+    def explore_leaves(self, node, leaves=set()):
+        """ Update the set of nodes that are not additional.
+        """
+        if not node.additional:
+            leaves.add(node.id)
 
-                # Iterate over the intersection of the independent places from the non-dead parents parents
-                non_dead_parents = [parent.independent for parent in node.parents if not parent.dead]
-                if non_dead_parents:
-                    for independent_node in set.intersection(*non_dead_parents): 
-                        # Add the independency relation in nodes
-                        node.independent.add(independent_node)
-                        independent_node.independent.add(node)
+        for succ in node.agglomerated + node.redundant:
+            self.explore_leaves(succ, leaves)
 
-                # Add the independency relations in the matrix for places from the initial net
-                if not node.additional:
-                    self.product([node], [independent_node for independent_node in node.independent if not independent_node.additional], '0' )
-
-                # Add children to the queue
-                for child in node.agglomerated + node.redundant:
-                    queue.append(child)
-
-        # Case: partial relation
-        # Dead places are independent to all others places
-        dead_columns = []
-        for i, row in enumerate(self.matrix_initial):
-            # If the place is dead set the row to `0` 
-            if row[i] == '0':
-                for j in range(len(row)):
-                    row[j] = '0'
-                # Add the place to the dead columns
-                dead_columns.append(i)
-            else:
-                # If the place is not dead, set the dead columns to `0`
-                for dead_column in dead_columns:
-                    row[dead_column] = '0'      
-
-        return self.matrix_initial
-
-    def token_propagation(self, node, value, memoize=False):
+    def token_propagation(self, node, value, matrix, complete_matrix, memoize=False):
         """ Token propagation:
             - propagate reachable/dead places,
             - learn new concurrent/independent places,
@@ -282,7 +207,7 @@ class TFG:
         successors = []
 
         # Case: partial relation and parents already propagated
-        if not self.complete_matrix and all(parent.propagated for parent in node.parents):
+        if not complete_matrix and all(parent.propagated for parent in node.parents):
 
             # Update `propagated` flag of the node
             node.propagated = True
@@ -310,8 +235,8 @@ class TFG:
             # Set its value (if different from '.') in the concurrency matrix (non-dead / dead)
             if value != '.':
                 order = self.initial_net.order[node.id]
-                self.matrix_initial[order][order] = value
-            
+                matrix[order][order] = value
+
             # Add the node to the successors and predecessors lists
             successors.append(node)
             node.predecessors.append(node)
@@ -323,15 +248,15 @@ class TFG:
 
         # Token propagation over the agglomerated nodes
         for agglomerated in node.agglomerated:
-            agg_successors = self.token_propagation(agglomerated, value)
+            agg_successors = self.token_propagation(agglomerated, value, matrix, complete_matrix)
             successors += agg_successors
             
         # Token propagation over the redundancy nodes
         for redundant in node.redundant:
-            red_successors = self.token_propagation(redundant, value)
+            red_successors = self.token_propagation(redundant, value, matrix, complete_matrix)
             # Learn new concurrent places
             if value == '1':
-                self.product(red_successors, successors, value)
+                self.product(red_successors, successors, value, matrix)
             successors += red_successors
 
         # Successors memoization
@@ -341,14 +266,126 @@ class TFG:
         # Return successors
         return successors
 
-    def product(self, places1, places2, value):
+    def matrix(self, reduced_matrix, complete_matrix):
+        """ Change of Dimension Algorithm for Concurrency Matrix.
+        """
+        # Matrix initialization
+        if complete_matrix:
+            relation = '0'
+        else:
+            relation = '.'
+        matrix = [[relation for _ in range(i + 1)] for i in range(self.initial_net.number_places)]
+
+        # Propagate non-dead roots
+        for non_dead_root in self.non_dead_roots:
+            self.token_propagation(non_dead_root, '1', matrix, complete_matrix, memoize=True)
+
+        # Case: partial relation
+        if not complete_matrix:
+            # Propagate dead root
+            self.token_propagation(self.dead_root, '0', matrix, complete_matrix, memoize=True)
+
+        # Propagate roots values (from the reduced net)
+        for i in range(self.reduced_net.number_places):
+
+            # Get corresponding root and matrix value
+            root = self.get_node(self.reduced_net.places[i])
+            value = reduced_matrix[i][i]
+
+            # Alive root
+            if value == '1':
+                self.token_propagation(root, value, matrix, complete_matrix, memoize=True)
+                # Product with non-dead roots
+                for non_dead_root in self.non_dead_roots:
+                    self.product(non_dead_root.successors, root.successors, value, matrix)
+
+            # Case: partial relation and root not already propagated
+            if not complete_matrix and value != '1':
+                self.token_propagation(root, value, matrix, complete_matrix, memoize=True)
+    
+        # Product with non-dead roots
+        for non_dead_root_1, non_dead_root_2 in itertools.combinations(self.non_dead_roots, 2):
+            self.product(non_dead_root_1.successors, non_dead_root_2.successors, '1', matrix)
+
+        # Propagate the concurrency relation from the reduced matrix
+        for i, line in enumerate(reduced_matrix):
+
+            # Skip dead roots
+            if line[i] == '0':
+                continue
+            
+            # Only iterate over the lower triangle (symmetric relation)
+            for j, concurrency in enumerate(line[:-1]):
+
+                # The product of the concurrent roots' successors is included in the concurrency relation
+                if concurrency == '1':
+                    root_1, root_2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
+                    self.product(root_1.successors, root_2.successors, '1', matrix)
+
+                # Case: partial relation
+                if not complete_matrix and concurrency == '0':
+                    # Set roots as independent
+                    root_1, root_2 = self.get_node(self.reduced_net.places[i]), self.get_node(self.reduced_net.places[j])
+                    root_1.independent.add(root_2)
+                    root_2.independent.add(root_1)
+
+        # Case: partial relation
+        if not complete_matrix:
+
+            # Queue initialization
+            queue = deque()
+            # Add non-dead roots
+            for non_dead_root in self.non_dead_roots:
+                queue.append(non_dead_root)
+            # Add places from reduced net
+            for place_id in self.reduced_net.places:
+                queue.append(self.get_node(place_id))
+
+            while queue:
+                # Get first node in the queue
+                node = queue.popleft()
+
+                # Iterate over the intersection of the independent places from the non-dead parents parents
+                non_dead_parents = [parent.independent for parent in node.parents if not parent.dead]
+                if non_dead_parents:
+                    for independent_node in set.intersection(*non_dead_parents): 
+                        # Add the independency relation in nodes
+                        node.independent.add(independent_node)
+                        independent_node.independent.add(node)
+
+                # Add the independency relations in the matrix for places from the initial net
+                if not node.additional:
+                    self.product([node], [independent_node for independent_node in node.independent if not independent_node.additional], '0', matrix)
+
+                # Add children to the queue
+                for child in node.agglomerated + node.redundant:
+                    queue.append(child)
+
+        # Case: partial relation
+        # Dead places are independent to all others places
+        dead_columns = []
+        for i, row in enumerate(matrix):
+            # If the place is dead set the row to `0` 
+            if row[i] == '0':
+                for j in range(len(row)):
+                    row[j] = '0'
+                # Add the place to the dead columns
+                dead_columns.append(i)
+            else:
+                # If the place is not dead, set the dead columns to `0`
+                for dead_column in dead_columns:
+                    row[dead_column] = '0'      
+
+        return matrix
+
+    def product(self, places1, places2, value, matrix):
         """ Set the cartesian product between two lists of places
             to a value in the initial matrix. 
         """
         for place1, place2 in itertools.product(places1, places2):
             place1 = self.initial_net.order[place1.id]
             place2 = self.initial_net.order[place2.id]
-            self.matrix_initial[max(place1, place2)][min(place1, place2)] = value
+            matrix[max(place1, place2)][min(place1, place2)] = value
 
 
 class Node:
@@ -367,9 +404,12 @@ class Node:
     def __init__(self, id, additional=False):
         """ Initializer.
         """
+        # Id
         self.id = id
+
+        # Flag indicating if the node is an additional variable
         self.additional = additional
-        
+
         # Incoming arcs (parents)
         self.parents = []
 
@@ -377,7 +417,7 @@ class Node:
         self.redundant = []
         self.agglomerated = []
 
-        # Propagated flag
+        # Propagation flag
         self.propagated = False
 
         # Dead flag

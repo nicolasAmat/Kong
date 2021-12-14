@@ -34,8 +34,9 @@ import sys
 import tempfile
 import time
 
-from concurrent_places import ConcurrentPlaces
 from pt import PetriNet
+from tfg import TFG
+from utils import matrix_from_str, show_matrix
 
 
 def exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml):
@@ -58,6 +59,7 @@ def main():
     """
     # Arguments parser
     parser = argparse.ArgumentParser(description='Koncurrent places Grinder')
+
     parser.add_argument('--version',
                         action='version',
                         version='%(prog)s 1.0.0',
@@ -74,21 +76,15 @@ def main():
 
     group_reductions = parser.add_mutually_exclusive_group()
 
-    group_reductions.add_argument('--save-reduced', '-sr',
-                                    action='store_true',
-                                    help='save the reduced net')
+    group_reductions.add_argument('-sr', '--save-reduced',
+                                  action='store_true',
+                                  help='save the reduced net')
 
-    group_reductions.add_argument('--reduced', '-r',
-                                    action='store',
-                                    dest='reduced_net',
-                                    type=str,
-                                    help='reduced Petri Net (.net format)')
-
-    parser.add_argument('--timeout',
-                        action='store',
-                        dest='timeout',
-                        type=str,
-                        help='set time limit for the BDD-based exploration (caesar.bdd)')
+    group_reductions.add_argument('-r', '--reduced',
+                                  action='store',
+                                  dest='reduced_net',
+                                  type=str,
+                                  help='reduced Petri Net (.net format)')
 
     parser.add_argument('-pl', '--place-names',
                         action='store_true',
@@ -98,25 +94,37 @@ def main():
                         action='store_true',
                         help='show the computation time')
 
-    parser.add_argument('--reduction-ratio',
+    parser.add_argument('-srr', '--show-reduction-ratio',
                         action='store_true',
                         help='show the reduction ratio')
 
-    parser.add_argument('--show-equations',
+    parser.add_argument('-se', '--show-equations',
                         action='store_true',
                         help='show the reduction equations')
 
-    parser.add_argument('--draw-graph',
-                        action='store_true',
-                        help='draw the Token Flow Graph')
-
-    parser.add_argument('--show-reduced-matrix',
+    parser.add_argument('-srm', '--show-reduced-matrix',
                         action='store_true',
                         help='show the reduced matrix')
 
+    parser.add_argument('-dg', '--draw-graph',
+                        action='store_true',
+                        help='draw the Token Flow Graph')
+
+    parser.add_argument('--bdd-timeout',
+                        action='store',
+                        dest='bdd_timeout',
+                        type=str,
+                        help='set the time limit for marking graph exploration (caesar.bdd)')
+
+    parser.add_argument('--bdd-iterations',
+                        action='store',
+                        dest='bdd_iterations',
+                        type=str,
+                        help='set the limit for number of iterations for marking graph exploration (caesar.bdd)')
+
     results = parser.parse_args()
 
-    # Verbose option
+    # Configure verbosity
     if results.verbose:
         log.basicConfig(format="%(message)s", level=log.DEBUG)
         stdout = None
@@ -124,7 +132,7 @@ def main():
         log.basicConfig(format="%(message)s")
         stdout = subprocess.DEVNULL
 
-    # Check if extension is `.nupn`
+    # Convert input .nupn to .pnml
     f_pnml, f_net = None, None
     if results.infile.lower().endswith('.nupn'):
         log.info("> Convert '.nupn' to '.pnml'")
@@ -133,7 +141,7 @@ def main():
         results.infile = f_pnml.name
 
     # Read input net
-    log.info("> Read the input Petri net")
+    log.info("> Read the input net")
     initial_net = PetriNet(results.infile, initial_net=True)
     results.infile = initial_net.filename
 
@@ -142,7 +150,7 @@ def main():
     if results.reduced_net:
         reduced_net_filename = results.reduced_net
     else:
-        log.info("> Reduce the input Petri net")
+        log.info("> Reduce the input net")
         if results.save_reduced:
             reduced_net_filename = results.infile.replace('.pnml', '_reduced.net')
         else:
@@ -154,62 +162,87 @@ def main():
             print("# Reduction time:", time.time() - start_time)
 
     # Convert reduced net to .pnml format
-    log.info("> Convert the reduced Petri net to '.pnml' format")
+    log.info("> Convert the reduced net to '.pnml' format")
     f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
     subprocess.run(["ndrio", reduced_net_filename, f_reduced_pnml.name])
 
     # Read reduced net
-    log.info("> Read the reduced Petri net")
+    log.info("> Read the reduced net")
     reduced_net = PetriNet(f_reduced_pnml)
 
-    # Display reduction ratio if enabled
-    if results.reduction_ratio:
+    # Show reduction ratio if option enabled
+    if results.show_reduction_ratio:
         print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
+    
+    # Build the Token Flow Graph
+    log.info("> Build the Token Flow Graph")
+    tfg = TFG(reduced_net_filename, initial_net, reduced_net, results.show_equations)
 
     if reduced_net.places:
+        # Non fully reducible case
+        # Project units of the initial net to the reduced net if there is a unit safe NUPN decomposition
+        if initial_net.NUPN and initial_net.NUPN.unit_safe:
+            log.info("> Project units")
+            tfg.units_projection()
+            reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
+
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
-        PNML2NUPN = os.getenv('PNML2NUPN')
-        if not PNML2NUPN:
-            exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
-            sys.exit("Environment variable PNML2NUPN not defined!")
-        subprocess.run(["java", "-jar", PNML2NUPN, f_reduced_pnml.name], stdout=stdout)
         reduced_nupn = f_reduced_pnml.name.replace('.pnml', '.nupn')
+        subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout)
 
-        # If the initial is safe, add the information into the .nupn file
-        if initial_net.safe:
-            with open(reduced_nupn, 'r') as nupn: net = nupn.read()
-            with open(reduced_nupn, 'w') as nupn_pragma_safe: nupn_pragma_safe.write("!unit_safe\n" + net)
+        # Update places order
+        reduced_net.update_order_from_nupn(reduced_nupn)
 
-        # Set BDD exploration time limit
-        if results.timeout:
-            os.environ['CAESAR_BDD_TIMEOUT'] = results.timeout
-        elif os.getenv('CAESAR_BDD_TIMEOUT'):
-            del os.environ['CAESAR_BDD_TIMEOUT']
-
+        # Start time
         start_time = time.time()
+
+        # Set the time limit for marking graph exploration
+        if results.bdd_timeout:
+            os.environ['CAESAR_BDD_TIMEOUT'] = results.bdd_timeout
+            log.info("> Set environment variable CAESAR_BDD_TIMEOUT to `%s'", os.environ['CAESAR_BDD_TIMEOUT'])
+        elif os.getenv('CAESAR_BDD_TIMEOUT'):
+            log.warning("> Environment variable CAESAR_BDD_TIMEOUT is already set to `%s'", os.environ['CAESAR_BDD_TIMEOUT'])
+
+        # Set the limit for the number of iterations for marking graph exploration
+        if results.bdd_iterations:
+            os.environ['CAESAR_BDD_ITERATIONS'] = results.bdd_iterations
+            log.info("> Set environment variable CAESAR_BDD_ITERATIONS to `%s'", os.environ['CAESAR_BDD_ITERATIONS'])
+        elif os.getenv('CAESAR_BDD_ITERATIONS'):
+            log.warning("> Environment variable CAESAR_BDD_ITERATIONS is already set to `%s'", os.environ['CAESAR_BDD_ITERATIONS'])
 
         # Compute concurrency matrix of the reduced net
-        log.info("> Compute the concurrency matrix of the reduced Petri net")
-        matrix_reduced = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE).stdout.decode('utf-8')
-        matrix_time = time.time() - start_time
-        if matrix_reduced == '':
-            exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
-            return
-    else:
-        start_time = time.time()
-        matrix_reduced = ''
-        matrix_time = 0
+        log.info("> Compute the concurrency matrix of the reduced net")
+        reduced_matrix = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        caesar_bdd_time = time.time() - start_time
+        reduced_matrix, complete_matrix = matrix_from_str(reduced_matrix)
 
-    # Compute the concurrency matrix of the initial net using the system of equations and the concurrency matrix from the reduced net
-    log.info("> Change of basis")
-    concurrent_places = ConcurrentPlaces(initial_net, reduced_net, reduced_net_filename, matrix_reduced, results.place_names, results.show_equations, results.draw_graph, results.show_reduced_matrix)
+    else:
+        # Fully reducible net case
+        start_time = time.time()
+        reduced_matrix = ''
+        complete_matrix = True
+        caesar_bdd_time = 0
+
+    # Show the reduced matrix if enabled
+    if results.show_reduced_matrix:
+        print("# Reduced concurrency matrix")
+        show_matrix(reduced_matrix, reduced_net, results.place_names)
+
+    # Draw graph if option enabled
+    if results.draw_graph:
+        tfg.draw_graph()
+
+    # Change of Basis
+    log.info("> Change of dimension")
+    matrix = tfg.matrix(reduced_matrix, complete_matrix)
+    show_matrix(matrix, initial_net, results.place_names)
 
     # Show computation time
     if results.time:
         computation_time = time.time() - start_time
-        change_basis_time = computation_time - matrix_time
-        print("# Computation time: {} (Matrix: {} + Change of Basis: {})".format(computation_time, matrix_time, change_basis_time))
+        change_basis_time = computation_time - caesar_bdd_time
+        print("# Computation time: {} (Caesar.bdd: {} + Change of Dimension: {})".format(computation_time, caesar_bdd_time, change_basis_time))
 
     exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
 
