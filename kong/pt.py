@@ -222,7 +222,7 @@ class NUPN:
 
             # Current unit contains only one subunit
             if len(unit.subunits) == 1:
-                subunit = self.subunits.pop()
+                subunit = unit.subunits.pop()
                 del self.units[subunit.id]
                 unit.places |= subunit.places
                 unit.subunits = subunit.subunits
