@@ -137,7 +137,7 @@ def main():
     if results.infile.lower().endswith('.nupn'):
         log.info("> Convert '.nupn' to '.pnml'")
         f_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
-        subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=f_pnml)
+        subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=f_pnml, check=True)
         results.infile = f_pnml.name
 
     # Read input net
@@ -157,14 +157,14 @@ def main():
             f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
             reduced_net_filename = f_reduced_net.name
         start_time = time.time()
-        subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename])
+        subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename], check=True)
         if results.time:
             print("# Reduction time:", time.time() - start_time)
 
     # Convert reduced net to .pnml format
     log.info("> Convert the reduced net to '.pnml' format")
     f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
-    subprocess.run(["ndrio", reduced_net_filename, f_reduced_pnml.name])
+    subprocess.run(["ndrio", reduced_net_filename, f_reduced_pnml.name], check=True)
 
     # Read reduced net
     log.info("> Read the reduced net")
@@ -189,7 +189,7 @@ def main():
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
         reduced_nupn = f_reduced_pnml.name.replace('.pnml', '.nupn')
-        subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout)
+        subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout, check=True)
 
         # Update places order
         reduced_net.update_order_from_nupn(reduced_nupn)
@@ -213,9 +213,10 @@ def main():
 
         # Compute concurrency matrix of the reduced net
         log.info("> Compute the concurrency matrix of the reduced net")
-        reduced_matrix = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        caesar_bdd_data = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE)
         caesar_bdd_time = time.time() - start_time
-        reduced_matrix, complete_matrix = matrix_from_str(reduced_matrix)
+        assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
+        reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
 
     else:
         # Fully reducible net case
