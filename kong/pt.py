@@ -121,11 +121,11 @@ class PetriNet:
 
                 # Get places
                 pnml_places = unit.find(xmlns + 'places')
-                places = {place for place in pnml_places.text.split(' ')} if pnml_places is not None and pnml_places.text else set()
+                places = {place for place in pnml_places.text.strip('\n').split(' ')} if pnml_places is not None and pnml_places.text else set()
 
                 # Get subunits
                 pnml_subunits = unit.find(xmlns + 'subunits')
-                subunits = {self.NUPN.get_unit(subunit) for subunit in pnml_subunits.text.split(' ')} if pnml_subunits is not None and pnml_subunits.text else set()
+                subunits = {self.NUPN.get_unit(subunit) for subunit in pnml_subunits.text.strip('\n').split(' ')} if pnml_subunits is not None and pnml_subunits.text else set()
                 
                 # Create new unit
                 new_unit = self.NUPN.get_unit(name)
