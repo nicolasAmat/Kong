@@ -94,6 +94,10 @@ def main():
                         action='store_true',
                         help='show the computation time')
 
+    parser.add_argument('-sn', '--show-nupns',
+                        action='store_true',
+                        help='show the NUPNs')
+
     parser.add_argument('-srr', '--show-reduction-ratio',
                         action='store_true',
                         help='show the reduction ratio')
@@ -145,6 +149,11 @@ def main():
     initial_net = PetriNet(results.infile, initial_net=True)
     results.infile = initial_net.filename
 
+    # Show initial NUPN if option enabled
+    if results.show_nupns:
+        print("# Initial NUPN")
+        print(initial_net.NUPN)
+
     # Manage reduced net
     f_reduced_net = None
     if results.reduced_net:
@@ -173,18 +182,22 @@ def main():
     # Show reduction ratio if option enabled
     if results.show_reduction_ratio:
         print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
-    
+
     # Build the Token Flow Graph
     log.info("> Build the Token Flow Graph")
     tfg = TFG(reduced_net_filename, initial_net, reduced_net, results.show_equations)
 
     if reduced_net.places:
-        # Non fully reducible case
         # Project units of the initial net to the reduced net if there is a unit safe NUPN decomposition
         if initial_net.NUPN and initial_net.NUPN.unit_safe:
             log.info("> Project units")
             tfg.units_projection()
             reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
+        
+        # Show initial NUPN if option enabled
+        if results.show_nupns:
+            print("# Reduced NUPN")
+            print(reduced_net.NUPN)
 
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
