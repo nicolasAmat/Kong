@@ -37,44 +37,44 @@ CAESAR_BDD_MAPPER = {
 
 
 def show_matrix(matrix, net, place_names):
-        """ Show concurrency matrix.
-            (using run-length encoding)
-        """
-        if not net.places:
-            return
+    """ Show concurrency matrix.
+        (using run-length encoding)
+    """
+    if not net.places:
+        return
 
+    if place_names:
+        max_len = max([len(pl) for pl in net.places])
+
+    if net.initial_net:
+        prefix = ''
+    else:
+        prefix = '# '
+
+    for pl, line in zip(net.places, matrix):
         if place_names:
-            max_len = max([len(pl) for pl in net.places])
-
-        if net.initial_net:
-            prefix = ''
+            text = prefix + pl + ' ' * (max_len - len(pl) + 2)
         else:
-            prefix = '# '
-
-        for pl, line in zip(net.places, matrix):
-            if place_names:
-                text = prefix + pl + ' ' * (max_len - len(pl) + 2)
-            else:
-                text = prefix
-            for i in range(len(line)):
-                elem = line[i]
-                if i == 0:
-                    previous = elem
-                    counter = 0
-                if i == len(line) - 1:
-                    if previous != elem:
-                        text += rle_compression(previous, counter)
-                        text += elem
-                    else:
-                        text += rle_compression(previous, counter + 1)
+            text = prefix
+        for i in range(len(line)):
+            elem = line[i]
+            if i == 0:
+                previous = elem
+                counter = 0
+            if i == len(line) - 1:
+                if previous != elem:
+                    text += rle_compression(previous, counter)
+                    text += elem
                 else:
-                    if elem != previous:
-                        text += rle_compression(previous, counter)
-                        previous = elem
-                        counter = 1
-                    else:
-                        counter += 1
-            print(text)
+                    text += rle_compression(previous, counter + 1)
+            else:
+                if elem != previous:
+                    text += rle_compression(previous, counter)
+                    previous = elem
+                    counter = 1
+                else:
+                    counter += 1
+        print(text)
 
 
 def rle_compression(elem, counter):
@@ -121,7 +121,7 @@ def matrix_from_str(matrix_str):
             else:
                 value = CAESAR_BDD_MAPPER[value]
                 if value == '.':
-                    complete_matrix = True
+                    complete_matrix = False
                 new_line.append(value)
                 past_value = value
 
