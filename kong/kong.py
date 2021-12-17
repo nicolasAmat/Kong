@@ -188,8 +188,8 @@ def main():
     tfg = TFG(reduced_net_filename, initial_net, reduced_net, results.show_equations)
 
     if reduced_net.places:
-        # Project units of the initial net to the reduced net if there is a unit safe NUPN decomposition
-        if initial_net.NUPN and initial_net.NUPN.unit_safe:
+        # Project units of the initial net to the reduced net if there is a NUPN decomposition
+        if initial_net.NUPN:
             log.info("> Project units")
             tfg.units_projection()
             reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
