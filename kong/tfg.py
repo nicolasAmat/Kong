@@ -212,14 +212,10 @@ class TFG:
             # Update `propagated` flag of the node
             node.propagated = True
 
-            # TODO: FIX THAT
-            # The products of the parents' predecessors are independent
-            for parent_1, parent_2 in itertools.combinations(node.parents, 2):
-                # for pred_1, pred_2 in itertools.product(parent_1.predecessors, parent_2.predecessors):
-                #     pred_1.independent.add(pred_2)
-                #     pred_2.independent.add(pred_1)
-                parent_1.independent.add(parent_2)
-                parent_2.independent.add(parent_1)
+            # Set redundant nodes as independent
+            for red_1, red_2 in itertools.combinations(node.parents, 2):
+                red_1.independent.add(red_2)
+                red_2.independent.add(red_1)
 
             # Set the predecessors of the node
             node.predecessors = [predecessor for parent in node.parents for predecessor in parent.predecessors]
