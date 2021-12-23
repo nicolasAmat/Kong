@@ -20,7 +20,7 @@ along with Kong. If not, see <https://www.gnu.org/licenses/>.
 __author__ = "Nicolas AMAT, LAAS-CNRS"
 __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 import re
 import tempfile
@@ -45,7 +45,7 @@ class PetriNet:
         # Total number of places
         self.number_places = 0
 
-        # Flag
+        # Initial net flag
         self.initial_net = initial_net
 
         # Corresponding NUPN
@@ -54,7 +54,7 @@ class PetriNet:
         self.parse_net(filename)
 
     def __str__(self):
-        """ Petri Net places to .net format.
+        """ Textual Petri net places.
         """
         return ' '.join(self.places)
 
@@ -71,14 +71,14 @@ class PetriNet:
         for place_node in root.iter(xmlns + "place"):
 
             if self.initial_net:
-                # If initial net, assume there is no `name/text` field
+                # If initial net, assume there is no `name/text` element
                 place = place_node.attrib['id']
 
                 # Check if there exists one
-                text_field = place_node.find(xmlns + "name/" + xmlns + "text")
-                if text_field is not None:
+                text_element = place_node.find(xmlns + "name/" + xmlns + "text")
+                if text_element is not None:
                     # If it is the case, set its value to the id
-                    text_field.text = place
+                    text_element.text = place
                 else:
                     # If not, create one
                     name = ET.SubElement(place_node, 'name')
@@ -86,7 +86,7 @@ class PetriNet:
                     text.text = place
 
             else:
-                # If reduced net, take the `name/text` field instead
+                # If reduced net, take the `name/text` element instead
                 place = place_node.find(xmlns + "name/" + xmlns + "text").text
 
             self.places.append(place)
@@ -98,9 +98,9 @@ class PetriNet:
             self.filename = tempfile.NamedTemporaryFile(suffix='.pnml').name
             tree.write(self.filename, encoding="utf-8", xml_declaration=True)
 
-            # Check is the net is known to be safe
-            structure = root.find(xmlns + "net/" + xmlns  +  "page/" + xmlns + "toolspecific/" + xmlns + "structure")
-            
+            # Check if the net is known to be unit-safe
+            structure = root.find(xmlns + "net/" + xmlns + "page/" + xmlns + "toolspecific/" + xmlns + "structure")
+
             # Exit if no NUPN inforation
             if structure is None:
                 return
@@ -182,7 +182,7 @@ class NUPN:
         text += "# Unit-safe: {}\n".format(self.unit_safe)
         text += "# Root: {}\n".format(self.root.id)
 
-        # Subuntits
+        # Subunits
         text += '\n'.join(map(str, self.units.values()))
 
         return text
@@ -200,7 +200,7 @@ class NUPN:
         return new_unit
 
     def add_place(self, place, units):
-        """ Add place into the optimal unit amoung a set of units.
+        """ Add place into the optimal unit among a set of units.
         """
         if len(units) == 1:
             units.pop().places.add(place)
@@ -255,7 +255,7 @@ class NUPN:
         # Get page
         page = root.find(xmlns + "net/" + xmlns + "page")
 
-        # Set place ids to the corresponding name/text field
+        # Set place ids to the corresponding name/text element
         place_mapping = {}
         for place in root.findall(xmlns + "net/" + xmlns + "page/" + xmlns + "place"):
             text = place.find(xmlns + "name/" + xmlns + "text").text

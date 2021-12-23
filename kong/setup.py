@@ -24,5 +24,5 @@ setup(
     version='1.0.0',
     description='Kong - Koncurrent Places Squasher',
     author='Nicolas AMAT, LAAS-CNRS',
-    executables = [Executable("kong.py")]
+    executables=[Executable("kong.py")]
 )

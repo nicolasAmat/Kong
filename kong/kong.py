@@ -3,7 +3,7 @@
 """
 Kong: Koncurrent places Grinder
 
-Input file format: .pnml
+Input file format: .pnml / .nupn
 
 This file is part of Kong.
 
@@ -24,7 +24,7 @@ along with Kong. If not, see <https://www.gnu.org/licenses/>.
 __author__ = "Nicolas AMAT, LAAS-CNRS"
 __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 import argparse
 import logging as log
@@ -136,7 +136,7 @@ def main():
         log.basicConfig(format="%(message)s")
         stdout = subprocess.DEVNULL
 
-    # Convert input .nupn to .pnml
+    # Convert .nupn to .pnml
     f_pnml, f_net = None, None
     if results.infile.lower().endswith('.nupn'):
         log.info("> Convert '.nupn' to '.pnml'")
@@ -144,7 +144,7 @@ def main():
         subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=f_pnml, check=True)
         results.infile = f_pnml.name
 
-    # Read input net
+    # Read initial Petri net
     log.info("> Read the input net")
     initial_net = PetriNet(results.infile, initial_net=True)
     results.infile = initial_net.filename
@@ -193,7 +193,7 @@ def main():
             log.info("> Project units")
             tfg.units_projection()
             reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
-        
+
         # Show initial NUPN if option enabled
         if results.show_nupns:
             print("# Reduced NUPN")
@@ -259,6 +259,7 @@ def main():
         print("# Computation time: {} (Caesar.bdd: {} + Change of Dimension: {})".format(computation_time, caesar_bdd_time, change_basis_time))
 
     exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml)
+
 
 if __name__ == '__main__':
     sys.setrecursionlimit(10000)
