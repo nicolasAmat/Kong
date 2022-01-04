@@ -173,7 +173,9 @@ class TFG:
             self.explore_leaves(self.get_node(place), leaves)
             
             # Compute optimal units
-            minimal_units[place] = self.initial_net.NUPN.root.minimal_units(leaves)
+            units = set()
+            self.initial_net.NUPN.root.minimal_units(leaves, units)
+            minimal_units[place] = units
 
         # Transfer the NUPN from the initial net to the reduced net
         self.reduced_net.NUPN, self.initial_net.NUPN = self.initial_net.NUPN, None

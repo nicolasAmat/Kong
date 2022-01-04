@@ -340,13 +340,13 @@ class Unit:
         descendants.add(self)
         return descendants
 
-    def minimal_units(self, leaves):
+    def minimal_units(self, leaves, units):
         """ Compute the optimal set of units for
             a given set of leaves (places of the initial net).
         """
-        intersection = self.places & leaves
-        
-        if intersection:
-            return {self}
+        if self.places & leaves:
+            units.add(self)
+            return
 
-        return set().union(*[subunit.minimal_units(leaves) for subunit in self.subunits])
+        for subunit in self.subunits:
+            subunit.minimal_units(leaves, units)
