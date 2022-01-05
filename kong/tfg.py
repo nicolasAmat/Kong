@@ -222,6 +222,9 @@ class TFG:
             # Set the predecessors of the node
             node.predecessors = [predecessor for parent in node.parents for predecessor in parent.predecessors]
 
+        # Case: partial relation
+        if not complete_matrix:
+
             # Update `dead` flag
             if value == '0':
                 # If all parents are dead set the node to dead, otherwise cannot propagate a dead value anymore
@@ -242,10 +245,10 @@ class TFG:
             successors.append(node)
             node.predecessors.append(node)
 
-            # Set agglomerated nodes as independent
-            for agg_1, agg_2 in itertools.combinations(node.agglomerated, 2):
-                agg_1.independent.add(agg_2)
-                agg_2.independent.add(agg_1)
+        # Set agglomerated nodes as independent
+        for agg_1, agg_2 in itertools.combinations(node.agglomerated, 2):
+            agg_1.independent.add(agg_2)
+            agg_2.independent.add(agg_1)
 
         # Token propagation over the agglomerated nodes
         for agglomerated in node.agglomerated:
@@ -303,7 +306,7 @@ class TFG:
             # Case: partial relation and root not already propagated
             if not complete_matrix and value != '1':
                 self.token_propagation(root, value, matrix, complete_matrix, memoize=True)
-    
+
         # Product with non-dead roots
         for non_dead_root_1, non_dead_root_2 in itertools.combinations(self.non_dead_roots, 2):
             self.product(non_dead_root_1.successors, non_dead_root_2.successors, '1', matrix)
@@ -335,9 +338,11 @@ class TFG:
 
             # Queue initialization
             queue = deque()
+
             # Add non-dead roots
             for non_dead_root in self.non_dead_roots:
                 queue.append(non_dead_root)
+
             # Add places from reduced net
             for place_id in self.reduced_net.places:
                 queue.append(self.get_node(place_id))
