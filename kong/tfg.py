@@ -137,7 +137,7 @@ class TFG:
         nodes = [self.get_node(id_node) for id_node in equation]
 
         # Redundance (Constant or Duplication or Shortcut)
-        if kind == 'R':
+        if kind in ['R', 'I']:
             child = nodes.pop(0)
             for parent in nodes:
                 parent.redundant.append(child)
@@ -150,12 +150,6 @@ class TFG:
             for child in nodes:
                 parent.agglomerated.append(child)
                 child.parents.append(parent)
-            return
-
-        # MG (TODO: missing the full implementation for using the `mg` option in the Reduce tool)
-        if kind == 'I':
-            constant = nodes.pop()
-            constant.agglomerated += nodes
             return
 
         raise ValueError("Invalid reduction equation")

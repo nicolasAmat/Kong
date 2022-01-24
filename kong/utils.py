@@ -36,7 +36,7 @@ CAESAR_BDD_MAPPER = {
 }
 
 
-def show_matrix(matrix, net, place_names):
+def show_matrix(matrix, net, no_rle=False, place_names=False):
     """ Show concurrency matrix.
         (using run-length encoding)
     """
@@ -56,24 +56,28 @@ def show_matrix(matrix, net, place_names):
             text = prefix + pl + ' ' * (max_len - len(pl) + 2)
         else:
             text = prefix
+
         for i in range(len(line)):
             elem = line[i]
-            if i == 0:
-                previous = elem
-                counter = 0
-            if i == len(line) - 1:
-                if previous != elem:
-                    text += rle_compression(previous, counter)
-                    text += elem
-                else:
-                    text += rle_compression(previous, counter + 1)
+            if no_rle:
+                text += elem
             else:
-                if elem != previous:
-                    text += rle_compression(previous, counter)
+                if i == 0:
                     previous = elem
-                    counter = 1
+                    counter = 0
+                if i == len(line) - 1:
+                    if previous != elem:
+                        text += rle_compression(previous, counter)
+                        text += elem
+                    else:
+                        text += rle_compression(previous, counter + 1)
                 else:
-                    counter += 1
+                    if elem != previous:
+                        text += rle_compression(previous, counter)
+                        previous = elem
+                        counter = 1
+                    else:
+                        counter += 1
         print(text)
 
 

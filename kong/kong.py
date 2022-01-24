@@ -33,6 +33,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from shutil import which
 
 from pt import PetriNet
 from tfg import TFG
@@ -76,6 +77,14 @@ def main():
 
     group_reductions = parser.add_mutually_exclusive_group()
 
+    parser.add_argument('-dp', '--dead-places',
+                        action='store_true',
+                        help='only compute dead places')
+
+    parser.add_argument('-sk', '--shrink',
+                        action='store_true',
+                        help='use Shrink tool')
+
     group_reductions.add_argument('-sr', '--save-reduced',
                                   action='store_true',
                                   help='save the reduced net')
@@ -85,6 +94,14 @@ def main():
                                   dest='reduced_net',
                                   type=str,
                                   help='reduced Petri Net (.net format)')
+
+    parser.add_argument('-nu', '--no-units',
+                        action='store_true',
+                        help='disable units propagation')
+
+    parser.add_argument('-nr', '--no-rle',
+                        action='store_true',
+                        help='disable run-length encoding (RLE)')
 
     parser.add_argument('-pl', '--place-names',
                         action='store_true',
@@ -165,8 +182,14 @@ def main():
         else:
             f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
             reduced_net_filename = f_reduced_net.name
+
         start_time = time.time()
-        subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename], check=True)
+
+        if not results.shrink and which("reduce") is not None:
+            subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename], check=True)
+        else:
+            subprocess.run(["shrink", "--equations", "--clean", "--redundant", "--compact", "--struct", "-i", results.infile, "-o", reduced_net_filename], check=True)
+
         if results.time:
             print("# Reduction time:", time.time() - start_time)
 
@@ -189,7 +212,7 @@ def main():
 
     if reduced_net.places:
         # Project units of the initial net to the reduced net if there is a NUPN decomposition
-        if initial_net.NUPN:
+        if not results.no_units and initial_net.NUPN:
             log.info("> Project units")
             tfg.units_projection()
             reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
@@ -241,7 +264,7 @@ def main():
     # Show the reduced matrix if enabled
     if results.show_reduced_matrix:
         print("# Reduced concurrency matrix")
-        show_matrix(reduced_matrix, reduced_net, results.place_names)
+        show_matrix(reduced_matrix, reduced_net, results.no_rle, results.place_names)
 
     # Draw graph if option enabled
     if results.draw_graph:
@@ -250,7 +273,7 @@ def main():
     # Change of Basis
     log.info("> Change of dimension")
     matrix = tfg.matrix(reduced_matrix, complete_matrix)
-    show_matrix(matrix, initial_net, results.place_names)
+    show_matrix(matrix, initial_net, results.no_rle, results.place_names)
 
     # Show computation time
     if results.time:
