@@ -1,5 +1,12 @@
 # Kong: Koncurrent places Grinder
 
+<br />
+<p align="center">
+  <a href="https://github.com/nicolasAmat/Kong">
+    <img src="logo.png" alt="Logo" width="256" height="258">
+  </a>
+</p>
+
 ## About
 
 Kong is a tool to compute the concurrency relation of a Petri using net reduction.
