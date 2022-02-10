@@ -195,7 +195,7 @@ class TFG:
 
     def token_propagation(self, node, value, matrix, complete_matrix, memoize=False):
         """ Token propagation:
-            - propagate reachable/dead places,
+            - propagate non dead/dead places,
             - learn new concurrent/independent places,
             - memoize successors.
         """
@@ -264,7 +264,7 @@ class TFG:
         # Return successors
         return successors
 
-    def matrix(self, reduced_matrix, complete_matrix):
+    def concurrency_matrix(self, reduced_matrix, complete_matrix):
         """ Change of Dimension Algorithm for Concurrency Matrix.
         """
         # Matrix initialization
@@ -386,6 +386,92 @@ class TFG:
             place1 = self.initial_net.order[place1.id]
             place2 = self.initial_net.order[place2.id]
             matrix[max(place1, place2)][min(place1, place2)] = value
+
+    def lazy_token_propagation(self, node, value, vector, complete_vector):
+        """ Lazy token propagation:
+            - propagate non dead/dead places.
+        """
+        # Initialization
+        successors = []
+
+        # Case: partial relation and parents already propagated
+        if not complete_vector and all(parent.propagated for parent in node.parents):
+
+            # Update `propagated` flag of the node
+            node.propagated = True
+
+            # Set the predecessors of the node
+            node.predecessors = [predecessor for parent in node.parents for predecessor in parent.predecessors]
+
+        # Case: partial relation
+        if not complete_vector:
+
+            # Update `dead` flag
+            if value == '1':
+                # If all parents are dead set the node to dead, otherwise cannot propagate a dead value anymore
+                if all(parent.dead for parent in node.parents):
+                    node.dead = True
+                else:
+                    value = '.'
+
+        # Case: the node is a place from the initial net
+        if not node.additional:
+            
+            # Set its value (if different from '.') in the dead vector (non-dead / dead)
+            if value != '.':
+                order = self.initial_net.order[node.id]
+                vector[order] = value
+
+        # Token propagation over the agglomerated nodes
+        for agglomerated in node.agglomerated:
+            agg_successors = self.lazy_token_propagation(agglomerated, value, vector, complete_vector)
+            successors += agg_successors
+            
+        # Token propagation over the redundancy nodes
+        for redundant in node.redundant:
+            red_successors = self.lazy_token_propagation(redundant, value, vector, complete_vector)
+            successors += red_successors
+
+        # Return successors
+        return successors
+
+
+
+    def dead_places_vector(self, reduced_vector, complete_vector):
+        """ Change of Dimension Algorithm for Dead Places Vector.
+        """
+        # Matrix initialization
+        if complete_vector:
+            relation = '1'
+        else:
+            relation = '.'
+        vector = [relation for i in range(self.initial_net.number_places)]
+
+        # Propagate non-dead roots
+        for non_dead_root in self.non_dead_roots:
+            self.lazy_token_propagation(non_dead_root, '0', vector, complete_vector)
+
+        # Case: partial relation
+        if not complete_vector:
+            # Propagate dead root
+            self.token_propagation(self.dead_root, '1', vector, complete_vector)
+
+        # Propagate roots values (from the reduced net)
+        for i in range(self.reduced_net.number_places):
+
+            # Get corresponding root and matrix value
+            root = self.get_node(self.reduced_net.places[i])
+            value = reduced_vector[i]
+
+            # Alive root
+            if value == '0':
+                self.lazy_token_propagation(root, value, vector, complete_vector)
+
+            # Case: partial relation and root not already propagated
+            if not complete_vector and value == '1':
+                self.lazy_token_propagation(root, value, vector, complete_vector)
+
+        return vector
 
 
 class Node:

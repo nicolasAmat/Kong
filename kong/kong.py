@@ -159,6 +159,15 @@ def main():
         log.basicConfig(format="%(message)s")
         stdout = subprocess.DEVNULL
 
+    # Set the computation
+    if results.dead_places:
+        computation = "dead places vector"
+        caesar_option = "-dead-places"
+    else:
+        computation = "concurrency matrix"
+        caesar_option = "-concurrent-places"
+
+    # Set input file
     infile = results.infile
 
     # Convert .nupn to .pnml
@@ -256,14 +265,16 @@ def main():
             log.warning("> Environment variable CAESAR_BDD_ITERATIONS is already set to `%s'", os.environ['CAESAR_BDD_ITERATIONS'])
 
         if not results.reduced_matrix:
-            # Compute concurrency matrix of the reduced net
-            log.info("> Compute the concurrency matrix of the reduced net")
-            caesar_bdd_data = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE)
+            # Compute concurrency matrix / dead places vector of the reduced net
+            log.info("> Compute the {} of the reduced net".format(computation))
+            caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, reduced_nupn], stdout=subprocess.PIPE)
             caesar_bdd_time = time.time() - start_time
             assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
             reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
+            if results.dead_places:
+                reduced_matrix = reduced_matrix[0]
         else:
-            log.info("> Read the concurrency matrix of the reduced net")
+            log.info("> Read the {} of the reduced net".format(computation))
             caesar_bdd_time = 0
             with open(results.reduced_matrix) as fp:
                 matrix_data = fp.read()
@@ -276,9 +287,9 @@ def main():
         complete_matrix = True
         caesar_bdd_time = 0
 
-    # Show the reduced matrix if enabled
+    # Show the reduced matrix / vector if enabled
     if results.show_reduced_matrix:
-        print("# Reduced concurrency matrix")
+        print("# Reduced {}".format(computation))
         show_matrix(reduced_matrix, reduced_net, results.no_rle, results.place_names)
 
     # Draw graph if option enabled
@@ -287,8 +298,12 @@ def main():
 
     # Change of Basis
     log.info("> Change of dimension")
-    matrix = tfg.matrix(reduced_matrix, complete_matrix)
-    show_matrix(matrix, initial_net, results.no_rle, results.place_names)
+    if results.dead_places:
+        vector = tfg.dead_places(reduced_matrix, complete_matrix)
+        show_matrix(vector, initial_net, results.no_rle, results.place_names)
+    else:
+        matrix = tfg.concurrency_matrix(reduced_matrix, complete_matrix)
+        show_matrix(matrix, initial_net, results.no_rle, results.place_names)
 
     # Show computation time
     if results.time:
