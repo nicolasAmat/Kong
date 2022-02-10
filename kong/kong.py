@@ -299,7 +299,7 @@ def main():
     # Change of Basis
     log.info("> Change of dimension")
     if results.dead_places:
-        vector = tfg.dead_places(reduced_matrix, complete_matrix)
+        vector = tfg.dead_places_vector(reduced_matrix, complete_matrix)
         show_matrix(vector, initial_net, results.no_rle, results.place_names)
     else:
         matrix = tfg.concurrency_matrix(reduced_matrix, complete_matrix)
