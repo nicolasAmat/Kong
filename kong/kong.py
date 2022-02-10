@@ -49,7 +49,7 @@ def exit_helper(results, f_pnml, f_net, f_reduced_net, f_reduced_pnml):
     if f_net is not None:
         f_net.close()
 
-    if not (results.save_reduced or results.reduced_net):
+    if not (results.save_reduced_net or results.reduced_net):
         f_reduced_net.close()
 
     f_reduced_pnml.close()
@@ -75,8 +75,6 @@ def main():
                         type=str,
                         help='input Petri net (.pnml or .nupn format)')
 
-    group_reductions = parser.add_mutually_exclusive_group()
-
     parser.add_argument('-dp', '--dead-places',
                         action='store_true',
                         help='only compute dead places')
@@ -85,15 +83,23 @@ def main():
                         action='store_true',
                         help='use Shrink tool')
 
-    group_reductions.add_argument('-sr', '--save-reduced',
+    group_reductions = parser.add_mutually_exclusive_group()
+
+    group_reductions.add_argument('-sr', '--save-reduced-net',
                                   action='store_true',
                                   help='save the reduced net')
 
-    group_reductions.add_argument('-r', '--reduced',
+    group_reductions.add_argument('-rn', '--reduced-net',
                                   action='store',
                                   dest='reduced_net',
                                   type=str,
-                                  help='reduced Petri Net (.net format)')
+                                  help='specify reduced Petri net (.net format)')
+
+    parser.add_argument('-rm', '--reduced-matrix',
+                        action='store',
+                        dest='reduced_matrix',
+                        type=str,
+                        help='specify reduced concurrency matrix (or dead places vector) file')
 
     parser.add_argument('-nu', '--no-units',
                         action='store_true',
@@ -153,18 +159,20 @@ def main():
         log.basicConfig(format="%(message)s")
         stdout = subprocess.DEVNULL
 
+    infile = results.infile
+
     # Convert .nupn to .pnml
     f_pnml, f_net = None, None
-    if results.infile.lower().endswith('.nupn'):
+    if infile.lower().endswith('.nupn'):
         log.info("> Convert '.nupn' to '.pnml'")
         f_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
-        subprocess.run(["caesar.bdd", "-pnml", results.infile], stdout=f_pnml, check=True)
-        results.infile = f_pnml.name
+        subprocess.run(["caesar.bdd", "-pnml", infile], stdout=f_pnml, check=True)
+        infile = f_pnml.name
 
     # Read initial Petri net
     log.info("> Read the input net")
-    initial_net = PetriNet(results.infile, initial_net=True)
-    results.infile = initial_net.filename
+    initial_net = PetriNet(infile, initial_net=True)
+    infile = initial_net.filename
 
     # Show initial NUPN if option enabled
     if results.show_nupns:
@@ -177,7 +185,7 @@ def main():
         reduced_net_filename = results.reduced_net
     else:
         log.info("> Reduce the input net")
-        if results.save_reduced:
+        if results.save_reduced_net:
             reduced_net_filename = results.infile.replace('.pnml', '_reduced.net')
         else:
             f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
@@ -186,9 +194,9 @@ def main():
         start_time = time.time()
 
         if not results.shrink and which("reduce") is not None:
-            subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", results.infile, reduced_net_filename], check=True)
+            subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", infile, reduced_net_filename], check=True)
         else:
-            subprocess.run(["shrink", "--equations", "--clean", "--redundant", "--compact", "--struct", "-i", results.infile, "-o", reduced_net_filename], check=True)
+            subprocess.run(["shrink", "--equations", "--clean", "--redundant", "--compact", "-i", infile, "-o", reduced_net_filename], check=True)
 
         if results.time:
             print("# Reduction time:", time.time() - start_time)
@@ -247,12 +255,19 @@ def main():
         elif os.getenv('CAESAR_BDD_ITERATIONS'):
             log.warning("> Environment variable CAESAR_BDD_ITERATIONS is already set to `%s'", os.environ['CAESAR_BDD_ITERATIONS'])
 
-        # Compute concurrency matrix of the reduced net
-        log.info("> Compute the concurrency matrix of the reduced net")
-        caesar_bdd_data = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE)
-        caesar_bdd_time = time.time() - start_time
-        assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
-        reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
+        if not results.reduced_matrix:
+            # Compute concurrency matrix of the reduced net
+            log.info("> Compute the concurrency matrix of the reduced net")
+            caesar_bdd_data = subprocess.run(["caesar.bdd", "-concurrent-places", reduced_nupn], stdout=subprocess.PIPE)
+            caesar_bdd_time = time.time() - start_time
+            assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
+            reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
+        else:
+            log.info("> Read the concurrency matrix of the reduced net")
+            caesar_bdd_time = 0
+            with open(results.reduced_matrix) as fp:
+                matrix_data = fp.read()
+            reduced_matrix, complete_matrix = matrix_from_str(matrix_data)
 
     else:
         # Fully reducible net case

@@ -51,6 +51,9 @@ class PetriNet:
         # Corresponding NUPN
         self.NUPN = None
 
+        # Current filename
+        self.filename = filename
+
         self.parse_net(filename)
 
     def __str__(self):
