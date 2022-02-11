@@ -132,3 +132,21 @@ def matrix_from_str(matrix_str):
         matrix.append(new_line)
 
     return matrix, complete_matrix
+
+
+def marking_parser(marking_str):
+    """ Parse marking.
+    """
+    marking = {}
+
+    for place_marking in marking_str.split():
+        place_marking = place_marking.split('*')
+
+        if len(place_marking) > 1:
+            tokens = int(place_marking[1])
+        else:
+            tokens = 1
+
+        marking[place_marking[0]] = tokens
+
+    return marking

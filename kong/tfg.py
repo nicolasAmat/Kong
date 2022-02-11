@@ -435,8 +435,6 @@ class TFG:
         # Return successors
         return successors
 
-
-
     def dead_places_vector(self, reduced_vector, complete_vector):
         """ Change of Dimension Algorithm for Dead Places Vector.
         """
@@ -473,6 +471,48 @@ class TFG:
 
         return vector
 
+    def marking_projection(self, initial_marking):
+        """ Marking projection algorithm.
+        """
+        # Initialize configuration
+        configuration = {}
+        for pl in self.initial_net.places:
+            if pl in initial_marking:
+                configuration[self.get_node(pl)] = initial_marking[pl]
+            else:
+                configuration[self.get_node(pl)] = 0
+
+        # Bottom-up propagation
+        for root in [self.get_node(place) for place in self.reduced_net.places] + [self.dead_root] + self.non_dead_roots:
+            if not self.bottom_up_token_propagation(root, configuration):
+                return None
+
+        # Restrict configuration to the reduced net
+        return {place: configuration[self.get_node(place)] for place in self.reduced_net.places}
+
+    def bottom_up_token_propagation(self, node, configuration):
+        """ Bottom up token propagation for marking projection.
+        """
+        # Bottom-up token propagation
+        for succ in node.redundant + node.agglomerated:
+            if not self.bottom_up_token_propagation(succ, configuration):
+                return False
+
+        # Set agglomeration configuration
+        if node.agglomerated:
+            configuration[node] = sum([configuration[agg] for agg in node.agglomerated])
+
+        # Set propagated
+        node.propagated = True
+
+        # Check well-definedness
+        if node.redundant:
+            for red in node.redundant:
+                if all(parent.propagated for parent in red.parents) and (sum([configuration[parent] for parent in red.parents]) != configuration[red]):
+                    return False
+
+        return True
+        
 
 class Node:
     """

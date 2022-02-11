@@ -22,6 +22,7 @@ __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
 __version__ = "2.0.0"
 
+import os.path
 import re
 import tempfile
 import xml.etree.ElementTree as ET
@@ -54,14 +55,21 @@ class PetriNet:
         # Current filename
         self.filename = filename
 
-        self.parse_net(filename)
+        # Parse file
+        extension = os.path.splitext(filename)[1]
+        if extension == '.pnml':
+            self.parse_pnml(filename)
+        elif extension == '.net':
+            self.parse_net(filename)
+        else:
+            raise ValueError("Petri net not in .pnml or .net format")
 
     def __str__(self):
         """ Textual Petri net places.
         """
         return ' '.join(self.places)
 
-    def parse_net(self, filename):
+    def parse_pnml(self, filename):
         """ Petri Net parser.
             Input format: .pnml
         """
@@ -159,6 +167,71 @@ class PetriNet:
             self.places.sort(key=lambda pl: self.order[pl])
         except FileNotFoundError as e:
             exit(e)
+
+    def parse_net(self, filename):
+        """ Petri Net parser.
+            Input format: .net
+        """
+        try:
+            with open(filename, 'r') as fp:
+                for line in fp.readlines():
+
+                    content = re.split(r'\s+', line.strip())  
+
+                    # Skip empty lines and get the first identifier
+                    if not content:
+                        continue
+                    else:
+                        element = content.pop(0)
+
+                    # Transition arcs
+                    if element == "tr":
+                        self.parse_transition(content)
+
+                    # Place
+                    if element == "pl":
+                        self.parse_place(content)
+            fp.close()
+        except FileNotFoundError as e:
+            exit(e)
+
+    def parse_transition(self, content):
+        """ Transition parser.
+            Input format: .net
+        """
+        content = self.parse_label(content[1:])
+        content.remove('->')
+
+        for arc in content:
+            if '*' in arc:
+                place = arc.split('*')[0]
+            else:
+                place = arc
+
+        if place not in self.places:
+            self.places.append(place)
+
+    def parse_place(self, content):
+        """ Place parser.
+            Input format: .net
+        """
+        place = content[0]
+
+        if place not in self.places:
+            self.places.append(place)
+
+    def parse_label(self, content):
+        """ Label parser.
+            Input format: .net
+        """
+        index = 0
+        if content and content[index] == ':':
+            label_skipped = content[index + 1][0] != '{'
+            index = 2
+            while not label_skipped:
+                label_skipped = content[index][-1] == '}'
+                index += 1
+        return content[index:]
 
 
 class NUPN:
