@@ -158,6 +158,7 @@ def main():
 
     if reduced_marking is None:
         print("UNREACHABLE")
+        sift_time = 0
     else:
         formula = '- (' + ' /\ '.join('{} = {}'.format(place, tokens) for place, tokens in reduced_marking.items()) + ')'
         
