@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Kong: Koncurrent places Grinder
+King: Marking Projector
 
-Input file format: .pnml / .nupn
+Input file format: .pnml
 
 This file is part of Kong.
 
@@ -28,7 +28,6 @@ __version__ = "2.0.0"
 
 import argparse
 import logging as log
-import os
 import subprocess
 import sys
 import tempfile
@@ -151,6 +150,7 @@ def main():
         tfg.draw_graph()
 
     # Read marking
+    log.info("> Read the marking")
     with open(results.marking) as fp:
         marking_str = fp.read()
     marking = marking_parser(marking_str)
