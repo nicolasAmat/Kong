@@ -217,7 +217,7 @@ def main():
 
     # Read reduced net
     log.info("> Read the reduced net")
-    reduced_net = PetriNet(f_reduced_pnml)
+    reduced_net = PetriNet(f_reduced_pnml.name)
 
     # Show reduction ratio if option enabled
     if results.show_reduction_ratio:
