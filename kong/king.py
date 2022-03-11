@@ -154,20 +154,32 @@ def main():
     with open(results.marking) as fp:
         marking_str = fp.read()
     marking = marking_parser(marking_str)
+
+    # Project marking
+    log.info("> Prokect the marking")
     reduced_marking = tfg.marking_projection(marking)
 
     if reduced_marking is None:
+        # Case: no possible projection
         print("UNREACHABLE")
         sift_time = 0
+    elif not reduced_marking:
+        # Case: tautological projection
+        print("REACHABLE")
+        sift_time = 0
     else:
+        # Case: projection to check
         formula = '- (' + ' /\ '.join('{} = {}'.format(place, tokens) for place, tokens in reduced_marking.items()) + ')'
         
         if results.show_formula:
             print("# Projected formula:", formula)
-        
+
         log.info("> Query to sift")
-        sift_time = time.time()
-        sift = subprocess.run(["sift", reduced_net_filename, "-f", formula], stdout=subprocess.PIPE, check=True)
+        with tempfile.NamedTemporaryFile(mode="w+t") as tmp:
+            tmp.writelines(formula)
+            tmp.seek(0)
+            sift_time = time.time()
+            sift = subprocess.run(["sift", reduced_net_filename, "-ff", tmp.name], stdout=subprocess.PIPE, check=True)
         sift_time = time.time() - sift_time
         if "some state violates condition -f:" == sift.stdout.decode('utf-8').splitlines()[0]:
             print("REACHABLE")

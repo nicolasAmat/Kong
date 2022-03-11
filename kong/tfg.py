@@ -95,7 +95,7 @@ class TFG:
         """ Return the node that corresponds to the id if it exists,
             otherwise create a new one and return it.
         """
-        if id_node == '1':
+        if id_node.isdigit() and id_node != '0':
             self.counter_non_dead_roots += 1
             id_node = "{}#{}".format(id_node, self.counter_non_dead_roots)
             node = Node(id_node, additional=True)
@@ -123,12 +123,13 @@ class TFG:
                     for line in re.split('\n+', content.group())[1:-1]:
                         if show_equations:
                             print(line)
-                        self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace(' <= ', ' ').replace(' = ', ' ').replace(' + ', ' ').replace('{', '').replace('}', '')))
+                        inequation_flag = '<=' in line
+                        self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace(' <= ', ' ').replace(' = ', ' ').replace(' + ', ' ').replace('{', '').replace('}', '')), inequation_flag)
 
         except FileNotFoundError as e:
             exit(e)
 
-    def parse_equation(self, equation):
+    def parse_equation(self, equation, inequation_flag=False):
         """ Equation parser.
             Input format: .net (output of the `reduced` tool)
         """
@@ -141,6 +142,8 @@ class TFG:
             child = nodes.pop(0)
             for parent in nodes:
                 parent.redundant.append(child)
+                if inequation_flag:
+                    parent.interval = True
                 child.parents.append(parent)
             return
 
@@ -476,11 +479,17 @@ class TFG:
         """
         # Initialize configuration
         configuration = {}
+        # Set initial marking
         for pl in self.initial_net.places:
             if pl in initial_marking:
                 configuration[self.get_node(pl)] = initial_marking[pl]
             else:
                 configuration[self.get_node(pl)] = 0
+        # Set nondead roots
+        for root in self.non_dead_roots:
+            configuration[root] = int(root.id.split('#')[0])
+        # Set dead root
+        configuration[self.dead_root] = 0
 
         # Bottom-up propagation
         for root in [self.get_node(place) for place in self.reduced_net.places] + [self.dead_root] + self.non_dead_roots:
@@ -508,8 +517,13 @@ class TFG:
         # Check well-definedness
         if node.redundant:
             for red in node.redundant:
-                if all(parent.propagated for parent in red.parents) and (sum([configuration[parent] for parent in red.parents]) != configuration[red]):
-                    return False
+                if all(parent.propagated for parent in red.parents):
+                    if any([parent.interval for parent in red.parents]):
+                        if sum([configuration[parent] for parent in red.parents]) < configuration[red]:
+                            return False
+                    else:
+                        if sum([configuration[parent] for parent in red.parents]) != configuration[red]:
+                            return False
 
         return True
         
@@ -535,6 +549,9 @@ class Node:
 
         # Flag indicating if the node is an additional variable
         self.additional = additional
+
+        # Flag indicating if the node is an interval
+        self.interval = False
 
         # Incoming arcs (parents)
         self.parents = []

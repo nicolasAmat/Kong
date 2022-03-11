@@ -192,6 +192,7 @@ class PetriNet:
                     if element == "pl":
                         self.parse_place(content)
             fp.close()
+            self.number_places = len(self.places)
         except FileNotFoundError as e:
             exit(e)
 
@@ -204,18 +205,18 @@ class PetriNet:
 
         for arc in content:
             if '*' in arc:
-                place = arc.split('*')[0]
+                place = arc.split('*')[0].replace('{', '').replace('}', '')
             else:
-                place = arc
+                place = arc.replace('{', '').replace('}', '')
 
-        if place not in self.places:
-            self.places.append(place)
+            if place not in self.places:
+                self.places.append(place)
 
     def parse_place(self, content):
         """ Place parser.
             Input format: .net
         """
-        place = content[0]
+        place = content[0].replace('{', '').replace('}', '')
 
         if place not in self.places:
             self.places.append(place)
