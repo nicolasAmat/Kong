@@ -5,12 +5,14 @@
 
 
 # Set timeout
-TIMEOUT=3600
+TIMEOUT=900
+
 # Set max instances
 MAX=4
+
 # Set paths
 PATH_INPUTS="models/mcc.lip6.fr/archives/"
-PATH_OUTPUTS="OUTPUTS/complete_computations/"
+PATH_OUTPUTS="OUTPUTS/complete_matrices/"
 
 # Check if PNML2NUPN environment variable is defined
 if [[ -z ${PNML2NUPN} ]]; then
@@ -39,13 +41,12 @@ while IFS= read INSTANCE; do
 
     # Get relative path
     PATH_INSTANCE="${PATH_INPUTS}${INSTANCE}"
-    PATH_INSTANCE_REDUCED="${PATH_INSTANCE%.*}_reduced.net"
     PATH_INSTANCE_NUPN="${PATH_INSTANCE%.*}.nupn"
     PATH_OUT_KONG="${PATH_OUTPUTS}${INSTANCE_NAME}_Kong.out"
     PATH_OUT_CAESAR="${PATH_OUTPUTS}${INSTANCE_NAME}_caesar.out"
 
     # Run kong
-    echo "timeout --kill-after=0 ${TIMEOUT} ../kong.py --time ${PATH_INSTANCE} -r ${PATH_INSTANCE_REDUCED} > ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
+    echo "timeout --kill-after=0 ${TIMEOUT} time ../../kong/kong.py conc ${PATH_INSTANCE} --no-units --show-reduction-ratio --time  &> ${PATH_OUT_KONG}" >> $TEMP_FILE_RUN
 
     # Run PNML2NUPN
     echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE_NUPN
