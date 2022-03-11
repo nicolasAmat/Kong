@@ -325,7 +325,7 @@ def main():
                         version='%(prog)s 2.0.0',
                         help='show the version number and exit')
 
-    sub_parsers = parser.add_subparsers(help='Computations', dest='sub_parsers')
+    sub_parsers = parser.add_subparsers(help='Mode', dest='sub_parsers')
 
     parent_parser = argparse.ArgumentParser(add_help=False)
 
@@ -400,7 +400,7 @@ def main():
                                   type=int,
                                   help='set the limit for number of iterations for marking graph exploration (caesar.bdd)')
 
-    parser_conc = sub_parsers.add_parser('conc', parents=[parent_parser, conc_dead_parser], help='concurrent places')
+    parser_conc = sub_parsers.add_parser('conc', parents=[parent_parser, conc_dead_parser], help='Concurrent places computation')
 
     parser_conc.add_argument('-rm', '--reduced-matrix',
                               action='store',
@@ -413,7 +413,7 @@ def main():
                               dest='show_reduced_result',
                               help='show the reduced matrix')
 
-    parser_dead = sub_parsers.add_parser('dead', parents=[parent_parser, conc_dead_parser], help='Dead places')
+    parser_dead = sub_parsers.add_parser('dead', parents=[parent_parser, conc_dead_parser], help='Dead places computation')
 
     parser_dead.add_argument('-rm', '--reduced-vector',
                              action='store',
@@ -426,7 +426,7 @@ def main():
                              dest='show_reduced_result',
                              help='show the reduced vector')
 
-    parser_reach = sub_parsers.add_parser('reach', parents=[parent_parser], help='Marking reachability')
+    parser_reach = sub_parsers.add_parser('reach', parents=[parent_parser], help='Marking reachability decision')
 
     parser_reach.add_argument('infile',
                               metavar='filename',
