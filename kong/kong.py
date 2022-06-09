@@ -247,7 +247,10 @@ def reach(args):
             reduced_net_filename = f_reduced_net.name
 
         reduction_time = time.time()
-        subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", infile, reduced_net_filename], check=True)
+        if not args.shrink and which("reduce") is not None:
+            subprocess.run(["reduce", "-rg,redundant,compact,4ti2", "-redundant-limit", "650", "-redundant-time", "10", "-inv-limit", "1000", "-inv-time", "10", "-PNML", infile, reduced_net_filename], check=True)
+        else:
+            subprocess.run(["shrink", "--equations", "--clean", "--redundant", "--compact", "-i", infile, "-o", reduced_net_filename], check=True)
 
         if args.time:
             print("# Reduction time:", time.time() - reduction_time)
