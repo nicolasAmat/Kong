@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to install INPUTS from the MCC.
+# Script to install INPUTS from the MCC'2021.
 
 
 # Enable extended globbing

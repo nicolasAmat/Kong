@@ -129,5 +129,10 @@ dmypy.json
 .pyre/
 
 # Benchmark
-benchmark/models/
-benchmark/OUTPUTS/
+*.csv
+benchmark/instances/INPUTS
+benchmark/instances/safe_list
+benchmark/instances/pt_list
+benchmark/reduction/OUTPUTS/
+benchmark/concurrent_places/OUTPUTS/
+benchmark/marking_reachability/OUTPUTS/

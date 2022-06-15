@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Reduction Evaluation: .out to .csv script.
+Reduction benchmark: .out to .csv script.
 """
 
 import argparse
@@ -15,7 +15,9 @@ import numpy as np
 def reductions_converter(path_outputs):
     """ Convert `reductions/` files.
     """
-    with open('../../reductions.csv', 'w') as csv_reductions:
+    # Write reductions data in `../csv/reductions.csv`
+    csv_path = os.path.join(os.path.dirname(__file__), '../csv/reductions.csv')
+    with open(csv_path, 'w') as csv_reductions:
 
         reductions_writer = csv.writer(csv_reductions)
         reductions_writer.writerow(['INSTANCE', 'RATIO_TFG', 'TIME_TFG', 'RATIO_REDUCE', 'TIME_REDUCE'])
@@ -50,12 +52,12 @@ def main():
     """ Main function.
     """
     # Arguments parser
-    parser = argparse.ArgumentParser(description='Reduction Evaluation: .out to .csv script')
+    parser = argparse.ArgumentParser(description='Reduction evaluation: .out to .csv script')
 
     parser.add_argument('path_outputs',
                         metavar='outputs',
                         type=str,
-                        help='path to outputs directory')
+                        help='path to OUTPUTS/ directory')
 
     results = parser.parse_args()
 

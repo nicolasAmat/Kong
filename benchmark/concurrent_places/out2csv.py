@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Concurrent Places Benchmark: .out to .csv script.
+Concurrent places benchmark: .out to .csv script.
 """
 
 import argparse
@@ -12,27 +12,28 @@ import os
 import numpy as np
 
 
-def complete_matrices_converter(path_outputs):
-    """ Convert `complete_matrices/` files.
+def complete_computations_converter(path_outputs):
+    """ Convert `OUTPUTS/complete_computations/` files.
     """
-    # Write computations data in `complete_matrices.csv`
-    with open('../complete_matrices.csv', 'w') as csv_computations:
+    # Write computations data in `../csv/complete_concurrent_computations.csv`
+    csv_path = os.path.join(os.path.dirname(__file__), '../csv/complete_concurrent_computations.csv')
+    with open(csv_path, 'w') as csv_computations:
 
         computations_writer = csv.writer(csv_computations)
         computations_writer.writerow(['INSTANCE', 'RELATION_SIZE', 'CONCURRENT_PLACES', 'TIME_KONG', 'TIME_CAESAR', 'CORRECTNESS'])
 
-        # Iterate over Kong `.out` files in `complete_matrices/` subdirectory
-        for kong_outfile in glob.glob("{}/complete_matrices/*_Kong.out".format(path_outputs)):
+        # Iterate over Kong `.out` files in `complete_computations/` subdirectory
+        for kong_outfile in glob.glob("{}/complete_computations/*_kong.out".format(path_outputs)):
 
             # Check if the corresponding caesar `.out` file exists
-            if os.path.exists(kong_outfile.replace('_Kong', '_caesar')):
-                caesar_outfile = kong_outfile.replace('_Kong', '_caesar')
+            if os.path.exists(kong_outfile.replace('_kong', '_caesar')):
+                caesar_outfile = kong_outfile.replace('_kong', '_caesar')
             else:
-                print("SKIPPED:", kong_outfile.split('_Kong.out')[0])
+                print("SKIPPED:", kong_outfile.split('_kong.out')[0])
                 continue
 
             # Get instance name
-            instance = os.path.basename(kong_outfile).replace('_Kong.out', '')
+            instance = os.path.basename(kong_outfile).replace('_kong.out', '')
             relation_size, concurrent_places = 0, 0
 
             # Get Kong data
@@ -97,26 +98,27 @@ def complete_matrices_converter(path_outputs):
             print(' '.join(map(str, row)))
 
 
-def partial_matrices_converter(path_outputs):
-    """ Convert `partial_matrices/` files.
+def partial_computations_converter(path_outputs):
+    """ Convert `OUTPUTS/partial_computations/` files.
     """
-    # Write computations data in `partial_matrices.csv`
-    with open('../partial_matrices.csv', 'w') as csv_computations:
+    # Write computations data in `../csv/partial_concurrent_computations.csv`
+    csv_path = os.path.join(os.path.dirname(__file__), '../csv/partial_concurrent_computations.csv')
+    with open(csv_path, 'w') as csv_computations:
 
         computations_writer = csv.writer(csv_computations)
         computations_writer.writerow(['INSTANCE', 'RELATION_SIZE', 'NUMBER_RELATIONS_KONG', 'CONCURRENT_PLACES_KONG', 'TIME_KONG', 'NUMBER_RELATIONS_CAESAR', 'CONCURRENT_PLACES_CAESAR', 'TIME_CAESAR', 'CORRECTNESS'])
 
-        # Iterate over Kong `.out` files in `partial_matrices/` subdirectory
-        for kong_outfile in glob.glob("{}/partial_matrices/*_Kong.out".format(path_outputs)):
+        # Iterate over Kong `.out` files in `partial_computations/` subdirectory
+        for kong_outfile in glob.glob("{}/partial_computations/*_kong.out".format(path_outputs)):
 
             # Check if the corresponding caesar `.out` file exists
-            if os.path.exists(kong_outfile.replace('_Kong', '_caesar')):
-                caesar_outfile = kong_outfile.replace('_Kong', '_caesar')
+            if os.path.exists(kong_outfile.replace('_kong', '_caesar')):
+                caesar_outfile = kong_outfile.replace('_kong', '_caesar')
             else:
                 continue
 
             # Get instance name
-            instance = os.path.basename(kong_outfile).replace('_Kong.out', '')
+            instance = os.path.basename(kong_outfile).replace('_kong.out', '')
 
             # Get Kong data
             with open(kong_outfile) as out_kong:
@@ -237,17 +239,17 @@ def main():
     """ Main function.
     """
     # Arguments parser
-    parser = argparse.ArgumentParser(description='Concurrent Places Benchmark: .out to .csv script')
+    parser = argparse.ArgumentParser(description='Concurrent places benchmark: .out to .csv script')
 
     parser.add_argument('path_outputs',
                         metavar='outputs',
                         type=str,
-                        help='path to outputs directory')
+                        help='path to OUTPUTS/ directory')
 
     results = parser.parse_args()
 
-    complete_matrices_converter(results.path_outputs)
-    partial_matrices_converter(results.path_outputs)
+    complete_computations_converter(results.path_outputs)
+    partial_computations_converter(results.path_outputs)
 
 
 if __name__ == "__main__":

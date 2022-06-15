@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Marking Generator
+Marking generator script
 """
 
 import argparse
@@ -78,7 +78,7 @@ def main():
     parser.add_argument('inputs',
                         metavar='inputs',
                         type=str,
-                        help='path to the INPUTS directory')
+                        help='path to the INPUTS/ directory')
 
     parser.add_argument('list',
                         metavar='list',

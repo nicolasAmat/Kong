@@ -40,12 +40,12 @@ def main():
     """ Main Function.
     """
     # Arguments parser
-    parser = argparse.ArgumentParser(description='Reducion Benchmark Script')
+    parser = argparse.ArgumentParser(description='Reducion benchmark script')
 
     parser.add_argument('net',
                         metavar='filename',
                         type=str,
-                        help='input Petri net (.pnml or .nupn format)')
+                        help='path to the input Petri net (.pnml format)')
 
     results = parser.parse_args()
 
@@ -53,7 +53,7 @@ def main():
     initial_net = PetriNet(results.net, initial_net=True)
     infile = initial_net.filename
 
-    # TFG reductions (as used with Kong)
+    # TFG reductions (as used in Kong)
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
     reduced_net_filename = f_reduced_net.name
     reduction_time = time.time()
@@ -64,7 +64,7 @@ def main():
     reduced_net = PetriNet(f_reduced_pnml.name)
     print("# TFG ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
 
-    # Reduce reductions (as used with the SMPT model-checker)
+    # Reduce reductions (as used in the SMPT model-checker)
     f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
     reduced_net_filename = f_reduced_net.name
     reduction_time = time.time()
