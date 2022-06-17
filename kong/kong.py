@@ -449,7 +449,11 @@ def main():
     args = parser.parse_args()
 
     # Call corresponding function
-    globals()[args.sub_parsers](args)
+    sub_parsers = args.sub_parsers
+    if sub_parsers is None:
+        parser.print_usage()
+    else:
+        globals()[sub_parsers](args)
 
 
 if __name__ == '__main__':
