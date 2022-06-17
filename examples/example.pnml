@@ -1,0 +1,171 @@
+<?xml version="1.0"?>
+<!--created Tue Jan 18 14:25:39 2022 by ndrio version 3.7.0-->
+<pnml xmlns="http://www.pnml.org/version-2009/grammar/pnml">
+ <net id="n-922-93A31-0" type ="http://www.pnml.org/version-2009/grammar/ptnet">
+  <name>
+   <text>example</text>
+  </name>
+ <page id="g-922-93A4B-1">
+  <place id="p0">
+  <name>
+   <text>p0</text>
+    <graphics>
+     <offset x="0" y="-10" />
+    </graphics>
+  </name>
+   <initialMarking>
+    <text>1</text>
+   </initialMarking>
+   <graphics>
+    <position x="90" y="110"/>
+   </graphics>
+  </place>
+  <place id="p1">
+  <name>
+   <text>p1</text>
+    <graphics>
+     <offset x="0" y="-10" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="150" y="50"/>
+   </graphics>
+  </place>
+  <place id="p2">
+  <name>
+   <text>p2</text>
+    <graphics>
+     <offset x="0" y="-10" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="270" y="50"/>
+   </graphics>
+  </place>
+  <place id="p3">
+  <name>
+   <text>p3</text>
+    <graphics>
+     <offset x="0" y="-10" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="150" y="170"/>
+   </graphics>
+  </place>
+  <place id="p4">
+  <name>
+   <text>p4</text>
+    <graphics>
+     <offset x="0" y="-10" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="210" y="110"/>
+   </graphics>
+  </place>
+  <place id="p5">
+   <graphics>
+    <position x="270" y="170"/>
+   </graphics>
+  </place>
+  <place id="p6">
+  <name>
+   <text>p6</text>
+    <graphics>
+     <offset x="0" y="-10" />
+    </graphics>
+  </name>
+   <initialMarking>
+    <text>1</text>
+   </initialMarking>
+   <graphics>
+    <position x="30" y="170"/>
+   </graphics>
+  </place>
+  <transition id="t-922-93A69-9">
+  <name>
+   <text>t0</text>
+    <graphics>
+     <offset x="0" y="0" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="150" y="110"/>
+   </graphics>
+  </transition>
+  <transition id="t-922-93A6B-10">
+  <name>
+   <text>t1</text>
+    <graphics>
+     <offset x="0" y="0" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="210" y="50"/>
+   </graphics>
+  </transition>
+  <transition id="t-922-93A6C-11">
+  <name>
+   <text>t2</text>
+    <graphics>
+     <offset x="0" y="0" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="210" y="170"/>
+   </graphics>
+  </transition>
+  <transition id="t-922-93A6F-12">
+  <name>
+   <text>t3</text>
+    <graphics>
+     <offset x="0" y="0" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="270" y="110"/>
+   </graphics>
+  </transition>
+  <transition id="t-922-93A70-13">
+  <name>
+   <text>t4</text>
+    <graphics>
+     <offset x="0" y="0" />
+    </graphics>
+  </name>
+   <graphics>
+    <position x="90" y="170"/>
+   </graphics>
+  </transition>
+  <arc id="e-922-93A71-14" source="p6" target="t-922-93A70-13">
+  </arc>
+  <arc id="e-922-93A72-15" source="t-922-93A6B-10" target="p2">
+  </arc>
+  <arc id="e-922-93A73-16" source="p1" target="t-922-93A6B-10">
+  </arc>
+  <arc id="e-922-93A73-17" source="t-922-93A69-9" target="p3">
+  </arc>
+  <arc id="e-922-93A74-18" source="t-922-93A69-9" target="p1">
+  </arc>
+  <arc id="e-922-93A75-19" source="p0" target="t-922-93A69-9">
+  </arc>
+  <arc id="e-922-93A75-20" source="p3" target="t-922-93A70-13">
+  </arc>
+  <arc id="e-922-93A76-21" source="t-922-93A70-13" target="p3">
+  </arc>
+  <arc id="e-922-93A76-22" source="p3" target="t-922-93A6C-11">
+  </arc>
+  <arc id="e-922-93A77-23" source="p5" target="t-922-93A6F-12">
+  </arc>
+  <arc id="e-922-93A77-24" source="t-922-93A6C-11" target="p5">
+  </arc>
+  <arc id="e-922-93A78-25" source="p4" target="t-922-93A6F-12">
+  </arc>
+  <arc id="e-922-93A78-26" source="t-922-93A6C-11" target="p4">
+  </arc>
+  <arc id="e-922-93A79-27" source="p2" target="t-922-93A6F-12">
+  </arc>
+ </page>
+ </net>
+</pnml>
