@@ -16,7 +16,8 @@ MAX=4
 
 # Set paths
 PATH_INPUTS=$1
-PATH_OUTPUTS="OUTPUTS/partial_computations/"
+SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
+PATH_OUTPUTS="${SCRIPT_DIR}/OUTPUTS/partial_computations/"
 
 # Check if PNML2NUPN environment variable is defined
 if [[ -z ${PNML2NUPN} ]]; then
@@ -37,27 +38,31 @@ TEMP_FILE_RUN=$(mktemp)
 # Read instances
 while IFS= read INSTANCE; do
 
-    # Display instance name
-    echo $INSTANCE
+  if [ -z "$INSTANCE" ]; then
+    continue
+  fi
 
-    # Get relative path
-    PATH_INSTANCE="${PATH_INPUTS}/${INSTANCE}/model.pnml"
-    PATH_INSTANCE_NUPN="${PATH_INSTANCE%.*}.nupn"
-    
-    PATH_OUTPUT_KONG="${PATH_OUTPUTS}${INSTANCE_NAME}_kong.out"
-    PATH_OUTPUT_CAESAR="${PATH_OUTPUTS}${INSTANCE_NAME}_caesar.out"
+  # Display instance name
+  echo $INSTANCE
 
-    # Export CAESAR_BDD_TIMEOUT
-    export CAESAR_BDD_TIMEOUT=${BDD_TIMEOUT}
+  # Get relative path
+  PATH_INSTANCE="${PATH_INPUTS}/${INSTANCE}/model.pnml"
+  PATH_INSTANCE_NUPN="${PATH_INSTANCE%.*}.nupn"
+  
+  PATH_OUTPUT_KONG="${PATH_OUTPUTS}${INSTANCE}_kong.out"
+  PATH_OUTPUT_CAESAR="${PATH_OUTPUTS}${INSTANCE}_caesar.out"
 
-    # Run Kong
-    echo "timeout --kill-after=0 ${GLOBAL_TIMEOUT} time ../../kong/kong.py conc --no-units --show-reduction-ratio --time --bdd-timeout ${BDD_TIMEOUT} ${PATH_INSTANCE} &> ${PATH_OUTPUT_KONG}" >> $TEMP_FILE_RUN
+  # Export CAESAR_BDD_TIMEOUT
+  export CAESAR_BDD_TIMEOUT=${BDD_TIMEOUT}
 
-    # Run PNML2NUPN
-    echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE_NUPN
+  # Run Kong
+  echo "timeout --kill-after=0 ${GLOBAL_TIMEOUT} time ${SCRIPT_DIR}/../../kong/kong.py conc --no-units --show-reduction-ratio --time --bdd-timeout ${BDD_TIMEOUT} ${PATH_INSTANCE} &> ${PATH_OUTPUT_KONG}" >> $TEMP_FILE_RUN
 
-    # Run Caesar.bdd
-    echo "timeout --kill-after=0 ${GLOBAL_TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUTPUT_CAESAR}" >> $TEMP_FILE_RUN
+  # Run PNML2NUPN
+  echo "java -jar ${PNML2NUPN} ${PATH_INSTANCE} &> /dev/null" >> $TEMP_FILE_NUPN
+
+  # Run Caesar.bdd
+  echo "timeout --kill-after=0 ${GLOBAL_TIMEOUT} time caesar.bdd -concurrent-places ${PATH_INSTANCE_NUPN} &> ${PATH_OUTPUT_CAESAR}" >> $TEMP_FILE_RUN
 
 done <$LIST
 
