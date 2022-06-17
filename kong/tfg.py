@@ -122,7 +122,8 @@ class TFG:
                         print("# System of equations")
                     for line in re.split('\n+', content.group())[1:-1]:
                         if show_equations:
-                            print(line)
+                            if not '# net' in line:
+                                print(line)
                         inequation_flag = '<=' in line
                         self.parse_equation(re.split(r'\s+', line.replace(' |- ', ' ').replace('# ', '').replace(' <= ', ' ').replace(' = ', ' ').replace(' + ', ' ').replace('{', '').replace('}', '')), inequation_flag)
 
@@ -135,6 +136,11 @@ class TFG:
         """
         # Split equation
         kind = equation.pop(0)
+
+        # Skip comment on the bound
+        if kind == 'net':
+            return
+
         nodes = [self.get_node(id_node) for id_node in equation]
 
         # Redundance (Constant or Duplication or Shortcut)
