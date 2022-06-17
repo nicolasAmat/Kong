@@ -11,7 +11,8 @@ MAX=8
 
 # Set paths
 PATH_INPUTS=$1
-PATH_OUTPUTS="OUTPUTS"
+SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
+PATH_OUTPUTS="${SCRIPT_DIR}/OUTPUTS"
 
 # Create ouputs directory if does not exist
 mkdir -p $PATH_OUTPUTS
@@ -25,12 +26,16 @@ TEMP_FILE_RUN=$(mktemp)
 
 while IFS= read INSTANCE; do
 
+  if [ -z "$INSTANCE" ]; then
+    continue
+  fi
+
   echo $INSTANCE
 
   PATH_INSTANCE="${PATH_INPUTS}/${INSTANCE}/model.pnml"
   PATH_OUTPUT="${PATH_OUTPUTS}/${INSTANCE}.out"
 
-  echo "./reducer.py ${PATH_INSTANCE} &> ${PATH_OUTPUT}" >> $TEMP_FILE_RUN
+  echo "${SCRIPT_DIR}/reducer.py ${PATH_INSTANCE} &> ${PATH_OUTPUT}" >> $TEMP_FILE_RUN
 
 done <$LIST
 

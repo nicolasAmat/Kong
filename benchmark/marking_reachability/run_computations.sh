@@ -13,7 +13,8 @@ MAX=4
 
 # Set paths
 PATH_INPUTS=$1
-PATH_OUTPUTS="OUTPUTS/"
+SCRIPT_DIR=$(dirname -- "$( readlink -f -- "$0"; )")
+PATH_OUTPUTS="${SCRIPT_DIR}/OUTPUTS/"
 
 # Create ouputs directory if does not exist
 mkdir -p $PATH_OUTPUTS
@@ -26,6 +27,10 @@ TEMP_FILE_RUN=$(mktemp)
 
 # Read instances
 while IFS= read INSTANCE; do
+
+  if [ -z "$INSTANCE" ]; then
+    continue
+  fi
 
   # Display instance name
   echo $INSTANCE
@@ -42,7 +47,7 @@ while IFS= read INSTANCE; do
     PATH_OUTPUT_SIFT="${PATH_OUTPUTS}${INSTANCE}-${INDEX}_sift.out"
     
     # Run Kong
-    echo "timeout --kill-after=0 ${TIMEOUT} time ../../kong/kong.py reach --show-reduction-ratio ${PATH_INSTANCE} --marking ${PATH_MARKING} &> ${PATH_OUTPUT_KONG}" >> $TEMP_FILE_RUN
+    echo "timeout --kill-after=0 ${TIMEOUT} time ${SCRIPT_DIR}/../../kong/kong.py reach --show-reduction-ratio ${PATH_INSTANCE} --marking ${PATH_MARKING} &> ${PATH_OUTPUT_KONG}" >> $TEMP_FILE_RUN
 
     # Run Sift
     echo "timeout --kill-after=0 ${TIMEOUT} time sift ${PATH_INSTANCE} -ff ${PATH_FORMULA} &> ${PATH_OUTPUT_SIFT}" >> $TEMP_FILE_RUN
