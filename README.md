@@ -9,14 +9,16 @@
 
 ## About
 
-Kong is a tool to compute the concurrency relation of a Petri using net reduction.
+Kong is a tool to compute the concurrency relation of a Petri using net reduction. It also permits to compute the dead places and check if a given marking is reachable.  
+
+For more information about the usage and the compatible formats please refer to the tool paper published at Petri Nets 2022: [Kong: a Tool to Squash Concurrent Places](https://hal.laas.fr/hal-03614426/document).
 
 ## Requirements
 
 + Python >+ 3.5
 + `caesar.bdd` from the [CADP Toolbox](https://cadp.inria.fr/) (only for the `conc` and `dead` subcommands)
 + `sift` from the [TINA Toolbox](http://projects.laas.fr/tina/) (only for the `reach` subcommand)
-+ `reduce` and ndrio tools from the [TINA Toolbox](http://projects.laas.fr/tina/)
++ `reduce` and `ndrio` tools from the [TINA Toolbox](http://projects.laas.fr/tina/)
 + (optional) [graphviz](https://pypi.org/project/graphviz/) python package
 
 ## Running the Tool
@@ -44,7 +46,7 @@ options:
   --version          show the version number and exit
 ```
 
-Similarly, you can list the options of each subcommand:
+Similarly, you can list the options of each subcommand.
 
 `conc`:
 ```
@@ -84,7 +86,7 @@ options:
                         show the reduced matrix
 ```
 
-`dead`
+`dead`:
 ```
 $> ./kong.py dead --help
 usage: kong.py dead [-h] [-v] [-sk] [-sr | -rn REDUCED_NET] [-t] [-srr] [-se] [-dg] [-nu] [-nr] [-pl] [-sn] [--bdd-timeout BDD_TIMEOUT] [--bdd-iterations BDD_ITERATIONS]
@@ -122,7 +124,7 @@ options:
                         show the reduced vector
 ```
 
-`reach`
+`reach`:
 ```
 $> ./kong.py reach --help
 usage: kong.py reach [-h] [-v] [-sk] [-sr | -rn REDUCED_NET] [-t] [-srr] [-se] [-dg] [-m MARKING] [-sf] filename
@@ -149,8 +151,6 @@ options:
   -sf, --show-projected-marking
                         show the projected marking
 ```
- 
-For more information, and concrete examples refer to our tool paper (see References).
 
 ## Performance Evaluation
 

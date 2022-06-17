@@ -4,6 +4,12 @@
 
 Scripts and notebooks to reproduce the experiments of our papers.
 
+## Additional requirements
+
++ Jupyter notebook
++ `numpy`, `matplotlib` and `pandas` Python packages
++ [pnml2nupn](https://github.com/lip6/pnml2nupn), and set the environment variable `PNML2NUPN` to the path of the `.jar` archive
+
 ## Usage
 
 ### 1) Install inputs
@@ -24,22 +30,26 @@ Our selection of instances for our papers is available in `instances/paper_lists
 
 ### 4) Run experiments
 
-Use our scripts to compare the tools on a given list of instances:
-- `./reduction/run_reductions.sh instances/INPUTS instances/MCC2021_list/pt_list` for the reduction analysis
-- `./marking_reachability.sh instances/INPUTS instances/paper_lists/marking_reachability_list` for the marking reachability analysis
-- `./concurrent_places/complete_computations.sh instances/INPUTS instances/paper_lists/concurrent_places_list` for the concurrency matrices analysis
-- `./concurrent_places/partial_computations.sh instances/INPUTS instances/paper_lists/concurrent_places_list` for the partial concurrency matrices analysis
+Use our scripts to run the tools on a given list of instances:
+-  Reduction analysis:  
+`./reduction/run_reductions.sh instances/INPUTS instances/MCC2021_list/pt_list`
+- Marking reachability analysis:  
+`./marking_reachability.sh instances/INPUTS instances/paper_lists/marking_reachability_list` 
+- Complete concurrency matrices:  
+`./concurrent_places/complete_computations.sh instances/INPUTS instances/paper_lists/concurrent_places_list`
+- Partial concurrency matrices analysis:  
+`./concurrent_places/partial_computations.sh instances/INPUTS instances/paper_lists/concurrent_places_list`
 
 ### 5) Generate summary files
 
-Summary files can be generated using the scripts `out2csv.py` in the different subdirectories.  
+Summary files can be generated using the `out2csv.py` scripts included in the different subdirectories (`reduction/`, `marking_reachability/` and `concurrent_places/`).  
 
-Example: `./concurrent_places/out2csv.py concurrent_places/OUTPUTS`
+**Example**: `./concurrent_places/out2csv.py concurrent_places/OUTPUTS/`
 
-The output `.csv` fill will be generated in the `csv/` directory.
+The summary `.csv` files will be automatically generated in the `csv/` directory.
 
 ### 6) Analyze the data
 
-To analyze the data we provide different notebooks in the `notebooks/` directory.
+To analyze the data we provide different notebooks in the `notebooks/` subdirectory.
 
-To run Jupyter notebook run the command: `jupyter notebook`. After opening one of the notebooks, run all the cells by clicking on `Cell -> Run All`. The figures will be generated in the different `pics/` subdirectories.
+To run Jupyter notebook run the command: `jupyter notebook`. After opening a notebook of interest, run all the cells by clicking on `Cell -> Run All`. The figures will be generated in the `pics/` subdirectories.
