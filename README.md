@@ -25,12 +25,12 @@ For more information about the usage and the compatible formats please refer to 
 
 Run **Kong** by selecting a subcommand (`conc` `dead`, or `reach`) and indicating the path to the input Petri net (`.pnml` or `.nupn` format):
 ```
-$> ./kong.py {conc, dead, reach} {<path_to_.pnml>, <path_to_.nupn>}
+$> ./kong/kong.py {conc, dead, reach} {<path_to_.pnml>, <path_to_.nupn>}
 ```
 
-You can list all the subcommands and options by using the *help* option:
+You can list all the subcommands by using the *help* option:
 ```
-$> ./kong.py --help
+$> ./kong/kong.py --help
 usage: kong.py [-h] [--version] {conc,dead,reach} ...
 
 Koncurrent places Grinder
@@ -50,7 +50,7 @@ Similarly, you can list the options of each subcommand.
 
 `conc`:
 ```
-$> ./kong.py conc --help
+$> ./kong/kong.py conc --help
 usage: kong.py conc [-h] [-v] [-sk] [-sr | -rn REDUCED_NET] [-t] [-srr] [-se] [-dg] [-nu] [-nr] [-pl] [-sn] [--bdd-timeout BDD_TIMEOUT] [--bdd-iterations BDD_ITERATIONS]
                     [-rm REDUCED_RESULT] [-srm]
                     filename
@@ -88,7 +88,7 @@ options:
 
 `dead`:
 ```
-$> ./kong.py dead --help
+$> ./kong/kong.py dead --help
 usage: kong.py dead [-h] [-v] [-sk] [-sr | -rn REDUCED_NET] [-t] [-srr] [-se] [-dg] [-nu] [-nr] [-pl] [-sn] [--bdd-timeout BDD_TIMEOUT] [--bdd-iterations BDD_ITERATIONS]
                     [-rm REDUCED_RESULT] [-srv]
                     filename
