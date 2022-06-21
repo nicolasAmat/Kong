@@ -140,3 +140,6 @@ benchmark/instances/pt_list
 benchmark/reduction/OUTPUTS/
 benchmark/concurrent_places/OUTPUTS/
 benchmark/marking_reachability/OUTPUTS/
+benchmark/notebooks/reduction/pics/*
+benchmark/notebooks/marking_reachability/pics/*
+benchmark/notebooks/concurrent_places/pics/*
