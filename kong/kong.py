@@ -223,6 +223,11 @@ def conc_dead(args, computation, caesar_option):
 def reach(args):
     """ Marking reachability decision procedure.
     """
+    # Quit if no marking specified
+    if args.marking is None:
+        print("No marking specified.")
+        return
+
     # Start time
     start_time = time.time()
 
