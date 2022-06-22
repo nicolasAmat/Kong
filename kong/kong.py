@@ -246,7 +246,7 @@ def reach(args):
     else:
         log.info("> Reduce the input net")
         if args.save_reduced_net:
-            reduced_net_filename = infile.replace('.pnml', '_reduced.net')
+            reduced_net_filename = args.infile.replace('.pnml', '_reduced.net')
         else:
             f_reduced_net = tempfile.NamedTemporaryFile(suffix='.net')
             reduced_net_filename = f_reduced_net.name
