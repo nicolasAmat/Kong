@@ -74,6 +74,8 @@ def conc_dead(args, computation, caesar_option):
         f_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
         subprocess.run(["caesar.bdd", "-pnml", infile], stdout=f_pnml, check=True)
         infile = f_pnml.name
+    else:
+        assert infile.lower().endswith('.pnml')
 
     # Read initial Petri net
     log.info("> Read the input net")
