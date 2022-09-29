@@ -52,8 +52,8 @@ class PetriNet:
         # Corresponding NUPN
         self.NUPN = None
 
-        # Current filename
-        self.filename = filename
+        # Current file
+        self.f_file = None
 
         # Parse file
         extension = os.path.splitext(filename)[1]
@@ -106,8 +106,8 @@ class PetriNet:
 
         if self.initial_net:
             # Write the net to a temporary file
-            self.filename = tempfile.NamedTemporaryFile(suffix='.pnml').name
-            tree.write(self.filename, encoding="utf-8", xml_declaration=True)
+            self.f_file = tempfile.NamedTemporaryFile(suffix='.pnml')
+            tree.write(self.f_file.name, encoding="utf-8", xml_declaration=True)
 
             # Check if the net is known to be unit-safe
             structure = root.find(xmlns + "net/" + xmlns + "page/" + xmlns + "toolspecific/" + xmlns + "structure")

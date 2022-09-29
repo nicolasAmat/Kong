@@ -80,7 +80,7 @@ def conc_dead(args, computation, caesar_option):
     # Read initial Petri net
     log.info("> Read the input net")
     initial_net = PetriNet(infile, initial_net=True)
-    infile = initial_net.filename
+    infile = initial_net.f_file.name
 
     # Show initial NUPN if option enabled
     if args.show_nupns:
@@ -140,7 +140,11 @@ def conc_dead(args, computation, caesar_option):
 
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
-        reduced_nupn = f_reduced_pnml.name.replace('.pnml', '.nupn')
+        if args.reduced_nupn:
+            reduced_nupn = args.reduced_nupn
+        else:
+            f_reduced_nupn = tempfile.NamedTemporaryFile(suffix='.nupn')
+            reduced_nupn = f_reduced_nupn.name
         subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout, check=True)
 
         # Update places order
@@ -216,7 +220,13 @@ def conc_dead(args, computation, caesar_option):
     if f_net is not None:
         f_net.close()
 
+    if initial_net.f_file is not None:
+        initial_net.f_file.close()
+
     if not (args.save_reduced_net or args.reduced_net):
+        f_reduced_net.close()
+
+    if not args.reduced_nupn:
         f_reduced_net.close()
 
     f_reduced_pnml.close()
@@ -239,7 +249,7 @@ def reach(args):
     # Read initial Petri net
     log.info("> Read the input net")
     initial_net = PetriNet(infile, initial_net=True)
-    infile = initial_net.filename
+    infile = initial_net.f_file.name
 
     # Manage reduced net
     f_reduced_net = None
@@ -320,6 +330,9 @@ def reach(args):
         print("# Computation time: {} (sift: {})".format(time.time() - start_time, sift_time))
 
     # Close temporary files
+    if initial_net.f_file is not None:
+        initial_net.f_file.close()
+
     if not (args.save_reduced_net or args.reduced_net):
         f_reduced_net.close()
 
@@ -397,6 +410,12 @@ def main():
     conc_dead_parser.add_argument('-sn', '--show-nupns',
                                   action='store_true',
                                   help='show the NUPNs')
+
+    conc_dead_parser.add_argument('-srn', '--save-reduced-nupn',
+                                  action='store',
+                                  dest='reduced_nupn',
+                                  type=str,
+                                  help='save the reduced NUPN given to caesar.bdd')
 
     conc_dead_parser.add_argument('--bdd-timeout',
                                   action='store',
