@@ -84,8 +84,8 @@ def conc_dead(args, computation, caesar_option):
 
     # Show initial NUPN if option enabled
     if args.show_nupns:
-        print("# Initial NUPN")
-        print(initial_net.NUPN)
+        print("# Initial NUPN", file=sys.stderr)
+        print(initial_net.NUPN, file=sys.stderr)
 
     # Manage reduced net
     f_reduced_net = None
@@ -107,7 +107,7 @@ def conc_dead(args, computation, caesar_option):
             subprocess.run(["shrink", "--equations", "--clean", "--redundant", "--compact", "-i", infile, "-o", reduced_net_filename], check=True)
 
         if args.time:
-            print("# Reduction time:", time.time() - start_time)
+            print("# Reduction time:", time.time() - start_time, file=sys.stderr)
 
     # Convert reduced net to .pnml format
     log.info("> Convert the reduced net to '.pnml' format")
@@ -120,7 +120,7 @@ def conc_dead(args, computation, caesar_option):
 
     # Show reduction ratio if option enabled
     if args.show_reduction_ratio:
-        print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
+        print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100, file=sys.stderr)
 
     # Build the Token Flow Graph
     log.info("> Build the Token Flow Graph")
@@ -135,8 +135,8 @@ def conc_dead(args, computation, caesar_option):
 
         # Show initial NUPN if option enabled
         if args.show_nupns:
-            print("# Reduced NUPN")
-            print(reduced_net.NUPN)
+            print("# Reduced NUPN", file=sys.stderr)
+            print(reduced_net.NUPN, file=sys.stderr)
 
         # Convert reduced net to .nupn format
         log.info("> Convert the reduced Petri net to '.nupn' format")
@@ -192,7 +192,7 @@ def conc_dead(args, computation, caesar_option):
 
     # Show the reduced matrix / vector if enabled
     if args.show_reduced_result:
-        print("# Reduced {}".format(computation))
+        print("# Reduced {}".format(computation), file=sys.stderr)
         show_matrix(reduced_matrix, reduced_net, args.no_rle, args.place_names)
 
     # Draw graph if option enabled
@@ -212,7 +212,7 @@ def conc_dead(args, computation, caesar_option):
     if args.time:
         computation_time = time.time() - start_time
         change_basis_time = computation_time - caesar_bdd_time
-        print("# Computation time: {} (Caesar.bdd: {} + Change of Dimension: {})".format(computation_time, caesar_bdd_time, change_basis_time))
+        print("# Computation time: {} (Caesar.bdd: {} + Change of Dimension: {})".format(computation_time, caesar_bdd_time, change_basis_time), file=sys.stderr)
 
     if f_pnml is not None:
         f_pnml.close()
@@ -278,7 +278,7 @@ def reach(args):
 
     # Show reduction ratio if option enabled
     if args.show_reduction_ratio:
-        print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100)
+        print("# Reduction ratio:", (1 - reduced_net.number_places / initial_net.number_places) * 100, file=sys.stderr)
 
     # Build the Token Flow Graph
     log.info("> Build the Token Flow Graph")
@@ -311,7 +311,7 @@ def reach(args):
         formula = '- (' + ' /\ '.join('{} = {}'.format(place, tokens) for place, tokens in reduced_marking.items()) + ')'
         
         if args.show_projected_marking:
-            print("# Projected marking:", formula)
+            print("# Projected marking:", formula, file=sys.stderr)
 
         log.info("> Query to sift")
         with tempfile.NamedTemporaryFile(mode="w+t") as tmp:
@@ -327,7 +327,7 @@ def reach(args):
 
     # Show computation time
     if args.time:
-        print("# Computation time: {} (sift: {})".format(time.time() - start_time, sift_time))
+        print("# Computation time: {} (sift: {})".format(time.time() - start_time, sift_time), file=sys.stderr)
 
     # Close temporary files
     if initial_net.f_file is not None:
