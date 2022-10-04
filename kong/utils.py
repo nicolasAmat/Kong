@@ -51,6 +51,9 @@ def show_matrix(matrix, net, no_rle=False, place_names=False):
     else:
         prefix = '# '
 
+    if len(matrix) > 0 and not isinstance(matrix[0], list):
+        matrix = (matrix,)
+
     for pl, line in zip(net.places, matrix):
         if place_names:
             text = prefix + pl + ' ' * (max_len - len(pl) + 2)
