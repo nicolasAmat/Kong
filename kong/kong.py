@@ -223,10 +223,10 @@ def conc_dead(args, computation, caesar_option):
     if initial_net.f_file is not None:
         initial_net.f_file.close()
 
-    if not (args.save_reduced_net or args.reduced_net):
+    if f_reduced_net is not None and not (args.save_reduced_net or args.reduced_net):
         f_reduced_net.close()
 
-    if not args.reduced_nupn:
+    if f_reduced_net is not None and not args.reduced_nupn:
         f_reduced_net.close()
 
     f_reduced_pnml.close()
