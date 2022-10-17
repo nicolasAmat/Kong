@@ -22,6 +22,7 @@ __contact__ = "namat@laas.fr"
 __license__ = "GPLv3"
 __version__ = "2.0.0"
 
+import sys
 
 CAESAR_BDD_MAPPER = {
     '1': '1',
@@ -48,8 +49,10 @@ def show_matrix(matrix, net, no_rle=False, place_names=False):
 
     if net.initial_net:
         prefix = ''
+        output_file = sys.stdout
     else:
         prefix = '# '
+        output_file = sys.stderr
 
     if len(matrix) > 0 and not isinstance(matrix[0], list):
         matrix = (matrix,)
@@ -81,7 +84,8 @@ def show_matrix(matrix, net, no_rle=False, place_names=False):
                         counter = 1
                     else:
                         counter += 1
-        print(text)
+
+        print(text, file=output_file)
 
 
 def rle_compression(elem, counter):
