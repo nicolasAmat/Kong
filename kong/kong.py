@@ -127,28 +127,32 @@ def conc_dead(args, computation, caesar_option):
     tfg = TFG(reduced_net_filename, initial_net, reduced_net, args.show_equations)
 
     if reduced_net.places:
-        # Project units of the initial net to the reduced net if there is a NUPN decomposition
-        if not args.no_units and initial_net.NUPN:
-            log.info("> Project units")
-            tfg.units_projection()
-            reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
+        reductible_or_not_nupn = \
+                reduced_net.number_places != initial_net.number_places or \
+                not args.infile.lower().endswith('.nupn')
+        if reductible_or_not_nupn:
+            # Project units of the initial net to the reduced net if there is a NUPN decomposition
+            if not args.no_units and initial_net.NUPN:
+                log.info("> Project units")
+                tfg.units_projection()
+                reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
 
-        # Show initial NUPN if option enabled
-        if args.show_nupns:
-            print("# Reduced NUPN", file=sys.stderr)
-            print(reduced_net.NUPN, file=sys.stderr)
+            # Show initial NUPN if option enabled
+            if args.show_nupns:
+                print("# Reduced NUPN", file=sys.stderr)
+                print(reduced_net.NUPN, file=sys.stderr)
 
-        # Convert reduced net to .nupn format
-        log.info("> Convert the reduced Petri net to '.nupn' format")
-        if args.reduced_nupn:
-            reduced_nupn = args.reduced_nupn
-        else:
-            f_reduced_nupn = tempfile.NamedTemporaryFile(suffix='.nupn')
-            reduced_nupn = f_reduced_nupn.name
-        subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout, check=True)
+            # Convert reduced net to .nupn format
+            log.info("> Convert the reduced Petri net to '.nupn' format")
+            if args.reduced_nupn:
+                reduced_nupn = args.reduced_nupn
+            else:
+                f_reduced_nupn = tempfile.NamedTemporaryFile(suffix='.nupn')
+                reduced_nupn = f_reduced_nupn.name
+            subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout, check=True)
 
-        # Update places order
-        reduced_net.update_order_from_nupn(reduced_nupn)
+            # Update places order
+            reduced_net.update_order_from_nupn(reduced_nupn)
 
         # Start time
         start_time = time.time()
@@ -168,14 +172,22 @@ def conc_dead(args, computation, caesar_option):
             log.warning("> Environment variable CAESAR_BDD_ITERATIONS is already set to `%s'", os.environ['CAESAR_BDD_ITERATIONS'])
 
         if not args.reduced_result:
-            # Compute concurrency matrix / dead places vector of the reduced net
-            log.info("> Compute the {} of the reduced net".format(computation))
-            caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, reduced_nupn], stdout=subprocess.PIPE)
-            caesar_bdd_time = time.time() - start_time
-            assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
-            reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
-            if args.sub_parsers == 'dead':
-                reduced_matrix = reduced_matrix[0]
+            if reductible_or_not_nupn:
+                # Compute concurrency matrix / dead places vector of the reduced net
+                log.info("> Compute the {} of the reduced net".format(computation))
+                caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, reduced_nupn], stdout=subprocess.PIPE)
+                caesar_bdd_time = time.time() - start_time
+                assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
+                reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
+                if args.sub_parsers == 'dead':
+                    reduced_matrix = reduced_matrix[0]
+            else:
+                # Compute concurrency matrix / dead places vector of the original net (*.nupn)
+                log.info("> Compute the {} of the original net".format(computation))
+                print(args.infile)
+                caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, args.infile])
+                caesar_bdd_time = time.time() - start_time
+                assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
         else:
             log.info("> Read the {} of the reduced net".format(computation))
             caesar_bdd_time = 0
@@ -185,28 +197,30 @@ def conc_dead(args, computation, caesar_option):
 
     else:
         # Fully reducible net case
+        reductible_or_not_nupn = True
         start_time = time.time()
         reduced_matrix = ''
         complete_matrix = True
         caesar_bdd_time = 0
 
-    # Show the reduced matrix / vector if enabled
-    if args.show_reduced_result:
-        print("# Reduced {}".format(computation), file=sys.stderr)
-        show_matrix(reduced_matrix, reduced_net, args.no_rle, args.place_names)
+    if reductible_or_not_nupn:
+        # Show the reduced matrix / vector if enabled
+        if args.show_reduced_result:
+            print("# Reduced {}".format(computation), file=sys.stderr)
+            show_matrix(reduced_matrix, reduced_net, args.no_rle, args.place_names)
 
-    # Draw graph if option enabled
-    if args.draw_graph:
-        tfg.draw_graph()
+        # Draw graph if option enabled
+        if args.draw_graph:
+            tfg.draw_graph()
 
-    # Change of Basis
-    log.info("> Change of dimension")
-    if args.sub_parsers == 'dead':
-        vector = tfg.dead_places_vector(reduced_matrix, complete_matrix)
-        show_matrix(vector, initial_net, args.no_rle, args.place_names)
-    else:
-        matrix = tfg.concurrency_matrix(reduced_matrix, complete_matrix)
-        show_matrix(matrix, initial_net, args.no_rle, args.place_names)
+        # Change of Basis
+        log.info("> Change of dimension")
+        if args.sub_parsers == 'dead':
+            vector = tfg.dead_places_vector(reduced_matrix, complete_matrix)
+            show_matrix(vector, initial_net, args.no_rle, args.place_names)
+        else:
+            matrix = tfg.concurrency_matrix(reduced_matrix, complete_matrix)
+            show_matrix(matrix, initial_net, args.no_rle, args.place_names)
 
     # Show computation time
     if args.time:
