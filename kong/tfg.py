@@ -177,21 +177,18 @@ class TFG:
             
             # Compute optimal units
             units = set()
-            self.initial_net.NUPN.root.minimal_units(leaves, units)
+            self.initial_net.nupn.root.minimal_units(leaves, units)
             minimal_units[place] = units
 
         # Transfer the NUPN from the initial net to the reduced net
-        self.reduced_net.NUPN, self.initial_net.NUPN = self.initial_net.NUPN, None
+        self.reduced_net.nupn, self.initial_net.nupn = self.initial_net.nupn, None
 
         # Clean the NUPN
-        self.reduced_net.NUPN.root.initialize_places()
+        self.reduced_net.nupn.root.initialize_places()
 
         # Project units
         for place, units in minimal_units.items():
-            self.reduced_net.NUPN.add_place(place, units)
-
-        # Simplify the projected NUPN
-        self.reduced_net.NUPN.simplification()
+            self.reduced_net.nupn.add_place(place, units)
 
     def explore_leaves(self, node, leaves=set()):
         """ Update the set of nodes that are not additional.

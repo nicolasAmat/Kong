@@ -34,11 +34,12 @@ class PetriNet:
     Petri Net.
     """
 
-    def __init__(self, filename, initial_net=False):
+    def __init__(self, filename, initial_net=False, no_units=False):
         """ Initializer.
         """
         # List of places
         self.places = []
+        self.initial_places = []
 
         # Places associated to their order 
         self.order = {}
@@ -49,8 +50,12 @@ class PetriNet:
         # Initial net flag
         self.initial_net = initial_net
 
+        # Transitions
+        self.pre = {}
+        self.post = {}
+
         # Corresponding NUPN
-        self.NUPN = None
+        self.nupn = None
 
         # Current file
         self.f_file = None
@@ -58,7 +63,7 @@ class PetriNet:
         # Parse file
         extension = os.path.splitext(filename)[1]
         if extension == '.pnml':
-            self.parse_pnml(filename)
+            self.parse_pnml(filename, no_units)
         elif extension == '.net':
             self.parse_net(filename)
         else:
@@ -69,7 +74,7 @@ class PetriNet:
         """
         return ' '.join(self.places)
 
-    def parse_pnml(self, filename):
+    def parse_pnml(self, filename, no_units):
         """ Petri Net parser.
             Input format: .pnml
         """
@@ -104,7 +109,7 @@ class PetriNet:
             self.order[place] = self.number_places
             self.number_places += 1
 
-        if self.initial_net:
+        if self.initial_net and not no_units:
             # Write the net to a temporary file
             self.f_file = tempfile.NamedTemporaryFile(suffix='.pnml')
             tree.write(self.f_file.name, encoding="utf-8", xml_declaration=True)
@@ -120,10 +125,10 @@ class PetriNet:
             unit_safe = structure.attrib["safe"] == "true"
             
             # Create NUPN
-            self.NUPN = NUPN(unit_safe)
+            self.nupn = NUPN(unit_safe)
 
             # Get root unit
-            self.NUPN.root = self.NUPN.get_unit(structure.attrib["root"])
+            self.nupn.root = self.nupn.get_unit(structure.attrib["root"])
 
             # Get NUPN information
             for unit in structure.findall(xmlns + 'unit'):
@@ -132,41 +137,19 @@ class PetriNet:
 
                 # Get places
                 pnml_places = unit.find(xmlns + 'places')
-                places = {place for place in pnml_places.text.split()} if pnml_places is not None and pnml_places.text else set()
+                places = [place for place in pnml_places.text.split()] if pnml_places is not None and pnml_places.text else []
 
                 # Get subunits
                 pnml_subunits = unit.find(xmlns + 'subunits')
-                subunits = {self.NUPN.get_unit(subunit) for subunit in pnml_subunits.text.split()} if pnml_subunits is not None and pnml_subunits.text else set()
+                subunits = {self.nupn.get_unit(subunit) for subunit in pnml_subunits.text.split()} if pnml_subunits is not None and pnml_subunits.text else set()
                 
                 # Create new unit
-                new_unit = self.NUPN.get_unit(name)
+                new_unit = self.nupn.get_unit(name)
                 new_unit.places = places
                 new_unit.subunits = subunits
 
             # Set successors
-            self.NUPN.root.compute_hierarchy()
-
-    def update_order_from_nupn(self, filename):
-        """ Parse the place labels from a given .nupn file
-            and update the order of the places.
-        """
-        try:
-            # Read the .nupn file
-            with open(filename, 'r') as fp:
-                # Find the labeling section
-                content = re.search(r'labels(.*)', fp.read(), re.DOTALL)
-
-                if content:
-                    # Update the order associated to each place
-                    for mapping in re.split('\n+', content.group())[1:len(self.places) + 1]:
-                        order, place = mapping.split(' ')
-                        order = int(order[1:])
-                        self.order[place] = order
-
-            # Sort the list of places
-            self.places.sort(key=lambda pl: self.order[pl])
-        except FileNotFoundError as e:
-            exit(e)
+            self.nupn.root.compute_hierarchy()
 
     def parse_net(self, filename):
         """ Petri Net parser.
@@ -200,17 +183,27 @@ class PetriNet:
         """ Transition parser.
             Input format: .net
         """
-        content = self.parse_label(content[1:])
-        content.remove('->')
+        transition = content.pop(0).replace('{', '').replace('}', '')
 
-        for arc in content:
-            if '*' in arc:
-                place = arc.split('*')[0].replace('{', '').replace('}', '')
-            else:
-                place = arc.replace('{', '').replace('}', '')
+        content = self.parse_label(content)
+        arrow = content.index("->")
 
-            if place not in self.places:
+        self.pre[transition] = [self.parse_arc(arc) for arc in content[0:arrow]]
+        self.post[transition] = [self.parse_arc(arc) for arc in content[arrow + 1:]]
+
+    def parse_arc(self, content):
+        """ Arc parser.
+            Input format: .net
+        """
+        if '*' in content:
+            place = content.split('*')[0].replace('{', '').replace('}', '')
+        else:
+            place = content.replace('{', '').replace('}', '')
+
+        if place not in self.places:
                 self.places.append(place)
+
+        return place
 
     def parse_place(self, content):
         """ Place parser.
@@ -220,6 +213,9 @@ class PetriNet:
 
         if place not in self.places:
             self.places.append(place)
+
+        if len(content) > 1 and content[1] == "(1)":
+            self.initial_places.append(place)
 
     def parse_label(self, content):
         """ Label parser.
@@ -234,6 +230,57 @@ class PetriNet:
                 index += 1
         return content[index:]
 
+    def export_nupn(self, filename):
+        """ Export NUPN.
+            Format: .nupn
+        """
+        with open(filename, 'w') as fp:
+            fp.write("!creator kong {}\n".format(__version__))
+
+            if self.nupn:
+                # Simplify the projected NUPN and update place order
+                self.order = self.nupn.simplification()
+
+                # Order places
+                self.places.sort(key=lambda pl: self.order[pl])
+                
+                if self.nupn.unit_safe:
+                    fp.write("!unit_safe unknown/tool\n")
+
+            else:
+                self.order = {pl: index for index, pl in enumerate(self.places)}
+
+            fp.write("places #{} 0...{}\n".format(self.number_places, self.number_places - 1))
+            fp.write("initial places #{}{}\n".format(len(self.initial_places), ' ' + ' '.join(map(lambda pl: str(self.order[pl]), self.initial_places)) if self.initial_places else ""))
+
+            if self.nupn:
+                fp.write("units #{} {}...{}\n".format(len(self.nupn.units), 0, len(self.nupn.units) - 1))
+                fp.write("root unit 0\n")
+
+                for unit in self.nupn.units.values():
+
+                    number_places = len(unit.places)
+                    start, end = (self.order[unit.places[0]], self.order[unit.places[-1]]) if number_places else (1, 0)
+            
+                    subunits = ' ' + ' '.join(map(lambda subunit: str(self.nupn.order[subunit.id]), unit.subunits)) if unit.subunits else ""
+
+                    fp.write("U{} #{} {}...{} #{}{}\n".format(self.nupn.order[unit.id], number_places, start, end, len(unit.subunits), subunits))
+
+            else:
+                fp.write("units #{} 0...{}\n".format(self.number_places + 1, self.number_places))
+                fp.write("root unit 0\n")
+                fp.write("U0 #0 1...0 #{} {}\n".format(self.number_places, ' '.join([str(i) for i in range(1, self.number_places + 1)])))
+                for place in self.places:
+                    place_order = self.order[place]
+                    fp.write("U{} #1 {}...{} #0\n".format(place_order + 1, place_order, place_order))
+
+            start, end = (0, len(self.pre) - 1) if len(self.pre) else (1, 0)
+            fp.write("transitions #{} {}...{}\n".format(len(self.pre), start, end))
+
+            for index, transition in enumerate(self.pre.keys()):
+                pre = ' ' + ' '.join(map(lambda pl: str(self.order[pl]), self.pre[transition])) if self.pre[transition] else ""
+                post = ' ' + ' '.join(map(lambda pl: str(self.order[pl]), self.post[transition])) if self.post[transition] else ""
+                fp.write("T{} #{}{} #{}{}\n".format(index, len(self.pre[transition]), pre, len(self.post[transition]), post))
 
 class NUPN:
     """ NUPN.
@@ -250,6 +297,9 @@ class NUPN:
 
         # Unit ids associated to the corresponding unit object
         self.units = {}
+
+        # Order
+        self.order = {}
 
     def __str__(self):
         """ NUPN to textual format.
@@ -280,11 +330,11 @@ class NUPN:
         """ Add place into the optimal unit among a set of units.
         """
         if len(units) == 1:
-            units.pop().places.add(place)
+            units.pop().places.append(place)
             return
 
         optimal_unit = min(units, key=lambda unit: sum([len(disjoint_unit.places) for disjoint_unit in set(self.units.values()) - unit.descendants]))
-        optimal_unit.places.add(place)
+        optimal_unit.places.append(place)
 
     def simplification(self):
         """ Simplify the units.
@@ -301,7 +351,7 @@ class NUPN:
             if len(unit.subunits) == 1:
                 subunit = unit.subunits.pop()
                 del self.units[subunit.id]
-                unit.places |= subunit.places
+                unit.places += subunit.places
                 unit.subunits = subunit.subunits
                 flag = True
 
@@ -319,60 +369,16 @@ class NUPN:
             else:
                 queue.extend(unit.subunits)
 
-    def write_toolspecific_pnml(self, filename):
-        """ Write the toolspecific part into a given .pnml file
-        """
-        xmlns = "{http://www.pnml.org/version-2009/grammar/pnml}"
-        ET.register_namespace('', "http://www.pnml.org/version-2009/grammar/pnml")
+        places_order = {}
+        places_counter = 0
 
-        # Parse .pnml file
-        tree = ET.parse(filename)
-        root = tree.getroot()
+        for unit_index, unit in enumerate(self.units.values()):
+            self.order[unit.id] = unit_index
+            for place in unit.places:
+                places_order[place] = places_counter
+                places_counter += 1
 
-        # Get page
-        page = root.find(xmlns + "net/" + xmlns + "page")
-
-        # Set place ids to the corresponding name/text element
-        place_mapping = {}
-        for place in root.findall(xmlns + "net/" + xmlns + "page/" + xmlns + "place"):
-            text = place.find(xmlns + "name/" + xmlns + "text").text
-            place_mapping[place.attrib["id"]] = text
-            place.attrib["id"] = place.find(xmlns + "name/" + xmlns + "text").text
-        for arc in root.findall(xmlns + "net/" + xmlns + "page/" + xmlns + "arc"):
-            if arc.attrib["source"] in place_mapping:
-                arc.attrib["source"] = place_mapping[arc.attrib["source"]]
-            if arc.attrib["target"] in place_mapping:
-                arc.attrib["target"] = place_mapping[arc.attrib["target"]] 
-
-        # Create toolspecific element
-        toolspecific = ET.SubElement(page, "toolspecific")
-        toolspecific.attrib["tool"] = "nupn"
-        toolspecific.attrib["version"] = "1.1"
-
-        # Create size element
-        size = ET.SubElement(toolspecific, "size")
-        size.attrib["places"] = str(len(root.findall(xmlns + "net/" + xmlns + "page/" + xmlns + "place")))
-        size.attrib["transitions"] = str(len(root.findall(xmlns + "net/" + xmlns + "page/" + xmlns + "transition")))
-        size.attrib["arcs"] = str(len(root.findall(xmlns + "net/" + xmlns + "page/" + xmlns + "arc")))
-
-        # Create structure element
-        structure = ET.SubElement(toolspecific, "structure")
-        structure.attrib["units"] = str(len(self.units))
-        structure.attrib["root"] = self.root.id
-        structure.attrib["safe"] = str(self.unit_safe).lower()
-
-        # Create unit elements
-        for u in self.units.values():
-            unit = ET.SubElement(structure, "unit")
-            unit.attrib["id"] = u.id
-            places = ET.SubElement(unit, "places")
-            places.text = ' '.join(u.places)
-            subunits = ET.SubElement(unit, "subunits")
-            subunits.text = ' '.join(map(lambda subunit: subunit.id, u.subunits))
-
-        # Write the final .pnml
-        tree.write(filename)
-
+        return places_order
 
 class Unit:
     """ NUPN Unit.
@@ -385,7 +391,7 @@ class Unit:
         self.id = id
 
         # Set of places
-        self.places = set()
+        self.places = []
         
         # Set of subunits
         self.subunits = set()
@@ -401,7 +407,7 @@ class Unit:
     def initialize_places(self):
         """ Remove all the places recursively.
         """
-        self.places = set()
+        self.places = []
 
         for subunit in self.subunits:
             subunit.initialize_places()
@@ -421,7 +427,7 @@ class Unit:
         """ Compute the optimal set of units for
             a given set of leaves (places of the initial net).
         """
-        if self.places & leaves:
+        if set(self.places) & leaves:
             units.add(self)
             return
 

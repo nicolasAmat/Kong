@@ -59,10 +59,8 @@ def conc_dead(args, computation, caesar_option):
     # Configure verbosity
     if args.verbose:
         log.basicConfig(format="%(message)s", level=log.DEBUG)
-        stdout = None
     else:
         log.basicConfig(format="%(message)s")
-        stdout = subprocess.DEVNULL
 
     # Set input file
     infile = args.infile
@@ -79,13 +77,13 @@ def conc_dead(args, computation, caesar_option):
 
     # Read initial Petri net
     log.info("> Read the input net")
-    initial_net = PetriNet(infile, initial_net=True)
+    initial_net = PetriNet(infile, initial_net=True, no_units=args.no_units)
     infile = initial_net.f_file.name
 
     # Show initial NUPN if option enabled
     if args.show_nupns:
         print("# Initial NUPN", file=sys.stderr)
-        print(initial_net.NUPN, file=sys.stderr)
+        print(initial_net.nupn, file=sys.stderr)
 
     # Manage reduced net
     f_reduced_net = None
@@ -109,14 +107,9 @@ def conc_dead(args, computation, caesar_option):
         if args.time:
             print("# Reduction time:", time.time() - start_time, file=sys.stderr)
 
-    # Convert reduced net to .pnml format
-    log.info("> Convert the reduced net to '.pnml' format")
-    f_reduced_pnml = tempfile.NamedTemporaryFile(suffix='.pnml')
-    subprocess.run(["ndrio", reduced_net_filename, f_reduced_pnml.name], check=True)
-
     # Read reduced net
     log.info("> Read the reduced net")
-    reduced_net = PetriNet(f_reduced_pnml.name)
+    reduced_net = PetriNet(reduced_net_filename)
 
     # Show reduction ratio if option enabled
     if args.show_reduction_ratio:
@@ -127,20 +120,14 @@ def conc_dead(args, computation, caesar_option):
     tfg = TFG(reduced_net_filename, initial_net, reduced_net, args.show_equations)
 
     if reduced_net.places:
-        reductible_or_not_nupn = \
+        reducible = \
                 reduced_net.number_places != initial_net.number_places or \
                 not args.infile.lower().endswith('.nupn')
-        if reductible_or_not_nupn:
+        if reducible:
             # Project units of the initial net to the reduced net if there is a NUPN decomposition
-            if not args.no_units and initial_net.NUPN:
+            if not args.no_units and initial_net.nupn:
                 log.info("> Project units")
                 tfg.units_projection()
-                reduced_net.NUPN.write_toolspecific_pnml(f_reduced_pnml.name)
-
-            # Show initial NUPN if option enabled
-            if args.show_nupns:
-                print("# Reduced NUPN", file=sys.stderr)
-                print(reduced_net.NUPN, file=sys.stderr)
 
             # Convert reduced net to .nupn format
             log.info("> Convert the reduced Petri net to '.nupn' format")
@@ -149,10 +136,12 @@ def conc_dead(args, computation, caesar_option):
             else:
                 f_reduced_nupn = tempfile.NamedTemporaryFile(suffix='.nupn')
                 reduced_nupn = f_reduced_nupn.name
-            subprocess.run(["ndrio", f_reduced_pnml.name, reduced_nupn], stdout=stdout, check=True)
+            reduced_net.export_nupn(reduced_nupn)
 
-            # Update places order
-            reduced_net.update_order_from_nupn(reduced_nupn)
+            # Show initial NUPN if option enabled
+            if args.show_nupns:
+                print("# Reduced NUPN", file=sys.stderr)
+                print(reduced_net.nupn, file=sys.stderr)
 
         # Start time
         start_time = time.time()
@@ -172,7 +161,7 @@ def conc_dead(args, computation, caesar_option):
             log.warning("> Environment variable CAESAR_BDD_ITERATIONS is already set to `%s'", os.environ['CAESAR_BDD_ITERATIONS'])
 
         if not args.reduced_result:
-            if reductible_or_not_nupn:
+            if reducible:
                 # Compute concurrency matrix / dead places vector of the reduced net
                 log.info("> Compute the {} of the reduced net".format(computation))
                 caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, reduced_nupn], stdout=subprocess.PIPE)
@@ -197,13 +186,13 @@ def conc_dead(args, computation, caesar_option):
 
     else:
         # Fully reducible net case
-        reductible_or_not_nupn = True
+        reducible = True
         start_time = time.time()
         reduced_matrix = ''
         complete_matrix = True
         caesar_bdd_time = 0
 
-    if reductible_or_not_nupn:
+    if reducible:
         # Show the reduced matrix / vector if enabled
         if args.show_reduced_result:
             print("# Reduced {}".format(computation), file=sys.stderr)
@@ -242,8 +231,6 @@ def conc_dead(args, computation, caesar_option):
 
     if f_reduced_net is not None and not args.reduced_nupn:
         f_reduced_net.close()
-
-    f_reduced_pnml.close()
 
 
 def reach(args):
@@ -309,7 +296,7 @@ def reach(args):
     marking = marking_parser(marking_str)
 
     # Project marking
-    log.info("> Prokect the marking")
+    log.info("> Project the marking")
     reduced_marking = tfg.marking_projection(marking)
 
     if reduced_marking is None:
