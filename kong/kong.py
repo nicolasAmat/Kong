@@ -173,7 +173,6 @@ def conc_dead(args, computation, caesar_option):
             else:
                 # Compute concurrency matrix / dead places vector of the original net (*.nupn)
                 log.info("> Compute the {} of the original net".format(computation))
-                print(args.infile)
                 caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, args.infile])
                 caesar_bdd_time = time.time() - start_time
                 assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
