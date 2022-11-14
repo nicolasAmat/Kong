@@ -239,7 +239,8 @@ class PetriNet:
 
             if self.nupn:
                 # Simplify the projected NUPN and update place order
-                self.order = self.nupn.simplification()
+                self.nupn.simplification()
+                self.order = self.nupn.compute_order(self.number_places)
 
                 # Order places
                 self.places.sort(key=lambda pl: self.order[pl])
@@ -257,14 +258,13 @@ class PetriNet:
                 fp.write("units #{} {}...{}\n".format(len(self.nupn.units), 0, len(self.nupn.units) - 1))
                 fp.write("root unit 0\n")
 
-                for unit in self.nupn.units.values():
-
+                for unit in self.nupn.order:
                     number_places = len(unit.places)
-                    start, end = (self.order[unit.places[0]], self.order[unit.places[-1]]) if number_places else (1, 0)
+                    start, end = (self.order[unit.places[-1]], self.order[unit.places[0]]) if number_places else (1, 0)
             
-                    subunits = ' ' + ' '.join(map(lambda subunit: str(self.nupn.order[subunit.id]), unit.subunits)) if unit.subunits else ""
+                    subunits = ' ' + ' '.join(map(lambda subunit: str(subunit.index), unit.subunits)) if unit.subunits else ""
 
-                    fp.write("U{} #{} {}...{} #{}{}\n".format(self.nupn.order[unit.id], number_places, start, end, len(unit.subunits), subunits))
+                    fp.write("U{} #{} {}...{} #{}{}\n".format(unit.index, number_places, start, end, len(unit.subunits), subunits))
 
             else:
                 fp.write("units #{} 0...{}\n".format(self.number_places + 1, self.number_places))
@@ -299,7 +299,7 @@ class NUPN:
         self.units = {}
 
         # Order
-        self.order = {}
+        self.order = []
 
     def __str__(self):
         """ NUPN to textual format.
@@ -333,7 +333,7 @@ class NUPN:
             units.pop().places.append(place)
             return
 
-        optimal_unit = min(units, key=lambda unit: sum([len(disjoint_unit.places) for disjoint_unit in set(self.units.values()) - unit.descendants]))
+        optimal_unit = max(units, key=lambda unit: sum([len(subunit.places) for subunit in unit.descendants]))
         optimal_unit.places.append(place)
 
     def simplification(self):
@@ -369,14 +369,15 @@ class NUPN:
             else:
                 queue.extend(unit.subunits)
 
+    def compute_order(self, number_places):
+        """ Compute units (and places order).
+        """
         places_order = {}
-        places_counter = 0
 
-        for unit_index, unit in enumerate(self.units.values()):
-            self.order[unit.id] = unit_index
-            for place in unit.places:
-                places_order[place] = places_counter
-                places_counter += 1
+        self.root.dfs_order(number_places - 1, len(self.units) - 1, places_order, self.order)
+        self.order.reverse()
+
+        self.root.compute_depth()
 
         return places_order
 
@@ -390,6 +391,9 @@ class Unit:
         # Id
         self.id = id
 
+        # Index
+        self.index = 0
+
         # Set of places
         self.places = []
         
@@ -398,6 +402,9 @@ class Unit:
 
         # Set of descendant units
         self.descendants = set()
+
+        # Maximal depth
+        self.max_depth = 0
 
     def __str__(self):
         """ Unit to textual format.
@@ -433,3 +440,29 @@ class Unit:
 
         for subunit in self.subunits:
             subunit.minimal_units(leaves, units)
+
+    def compute_depth(self):
+        """ Compute depth recursively.
+        """
+        if self.subunits:
+            self.max_depth = max([subunit.compute_depth() for subunit in self.subunits]) + 1
+        else:
+            self.max_depth = 0
+            
+        return self.max_depth
+
+    def dfs_order(self, places_counter, units_counter, places_order, units_order):
+        """ Set DFS order for units (and so places).
+        """
+        for subunit in sorted(self.subunits, key=lambda unit: unit.max_depth, reverse=True):
+            places_counter, units_counter = subunit.dfs_order(places_counter, units_counter, places_order, units_order)
+
+        units_order.append(self)
+        self.index = units_counter
+        units_counter -= 1
+
+        for place in self.places:
+            places_order[place] = places_counter
+            places_counter -= 1
+
+        return places_counter, units_counter

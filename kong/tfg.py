@@ -171,10 +171,11 @@ class TFG:
 
         # Iterate over the places of the reduced net
         for place in self.reduced_net.places:
+ 
             # Find leaves
             leaves = set()
-            self.explore_leaves(self.get_node(place), leaves)
-            
+            self.explore_leaves(self.nodes[place], leaves)
+
             # Compute optimal units
             units = set()
             self.initial_net.nupn.root.minimal_units(leaves, units)
@@ -187,8 +188,8 @@ class TFG:
         self.reduced_net.nupn.root.initialize_places()
 
         # Project units
-        for place, units in minimal_units.items():
-            self.reduced_net.nupn.add_place(place, units)
+        for place in sorted(self.reduced_net.places, key=lambda pl: len(minimal_units[pl])):
+            self.reduced_net.nupn.add_place(place, minimal_units[place])
 
     def explore_leaves(self, node, leaves=set()):
         """ Update the set of nodes that are not additional.
