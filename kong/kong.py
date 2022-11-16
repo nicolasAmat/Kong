@@ -167,8 +167,8 @@ def conc_dead(args, computation, caesar_option):
                 caesar_bdd_data = subprocess.run([args.command_reduced, caesar_option, reduced_nupn], stdout=subprocess.PIPE)
                 caesar_bdd_time = time.time() - start_time
                 if caesar_bdd_data.returncode not in (0, 5):
-                    print("Unexpected error while computing the concurrency matrix of the reduced net", file=sys.stderr)
-                    return caesar_bdd_data.returncode
+                    raise subprocess.CalledProcessError("Unexpected {} error while computing"\
+                          "the concurrency matrix of the reduced net".format(caesar_bdd_data.returncode))
                 reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
                 if args.sub_parsers == 'dead':
                     reduced_matrix = reduced_matrix[0]
@@ -178,8 +178,8 @@ def conc_dead(args, computation, caesar_option):
                 caesar_bdd_data = subprocess.run([args.command_reduced, caesar_option, args.infile])
                 caesar_bdd_time = time.time() - start_time
                 if caesar_bdd_data.returncode not in (0, 5):
-                    print("Unexpected error while computing the concurrency matrix of the reduced net", file=sys.stderr)
-                    return caesar_bdd_data.returncode
+                    raise subprocess.CalledProcessError("Unexpected {} error while computing"\
+                          "the concurrency matrix of the reduced net".format(caesar_bdd_data.returncode))
         else:
             log.info("> Read the {} of the reduced net".format(computation))
             caesar_bdd_time = 0
