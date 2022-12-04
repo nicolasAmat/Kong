@@ -164,19 +164,22 @@ def conc_dead(args, computation, caesar_option):
             if reducible:
                 # Compute concurrency matrix / dead places vector of the reduced net
                 log.info("> Compute the {} of the reduced net".format(computation))
-                caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, reduced_nupn], stdout=subprocess.PIPE)
+                caesar_bdd_data = subprocess.run([args.command_reduced, caesar_option, reduced_nupn], stdout=subprocess.PIPE)
                 caesar_bdd_time = time.time() - start_time
-                assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
+                if caesar_bdd_data.returncode not in (0, 5):
+                    raise subprocess.CalledProcessError("Unexpected {} error while computing"\
+                          "the concurrency matrix of the reduced net".format(caesar_bdd_data.returncode))
                 reduced_matrix, complete_matrix = matrix_from_str(caesar_bdd_data.stdout.decode('utf-8'))
                 if args.sub_parsers == 'dead':
                     reduced_matrix = reduced_matrix[0]
             else:
                 # Compute concurrency matrix / dead places vector of the original net (*.nupn)
                 log.info("> Compute the {} of the original net".format(computation))
-                print(args.infile)
-                caesar_bdd_data = subprocess.run(["caesar.bdd", caesar_option, args.infile])
+                caesar_bdd_data = subprocess.run([args.command_reduced, caesar_option, args.infile])
                 caesar_bdd_time = time.time() - start_time
-                assert caesar_bdd_data.returncode in (0, 5), "Unexpected error while computing the concurrency matrix of the reduced net"
+                if caesar_bdd_data.returncode not in (0, 5):
+                    raise subprocess.CalledProcessError("Unexpected {} error while computing"\
+                          "the concurrency matrix of the reduced net".format(caesar_bdd_data.returncode))
         else:
             log.info("> Read the {} of the reduced net".format(computation))
             caesar_bdd_time = 0
@@ -417,6 +420,13 @@ def main():
                                   dest='reduced_nupn',
                                   type=str,
                                   help='save the reduced NUPN given to caesar.bdd')
+
+    conc_dead_parser.add_argument('-cr', '--command-reduced',
+                                  action='store',
+                                  dest='command_reduced',
+                                  type=str,
+                                  help='set the command for computing the reduced concurrncy matrix or the reduced dead vector',
+                                  default='caesar.bdd')
 
     conc_dead_parser.add_argument('--bdd-timeout',
                                   action='store',
