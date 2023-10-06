@@ -78,7 +78,7 @@ def conc_dead(args, computation, caesar_option):
     # Read initial Petri net
     log.info("> Read the input net")
     initial_net = PetriNet(infile, initial_net=True, no_units=args.no_units)
-    infile = initial_net.f_file.name
+    infile = initial_net.f_file.name if initial_net.f_file is not None else infile
 
     # Show initial NUPN if option enabled
     if args.show_nupns:
@@ -312,7 +312,7 @@ def reach(args):
         sift_time = 0
     else:
         # Case: projection to check
-        formula = '- (' + ' /\ '.join('{} = {}'.format(place, tokens) for place, tokens in reduced_marking.items()) + ')'
+        formula = '- (' + ' /\ '.join('{} = {}'.format(place if '-' not in place and '.' not in place else "{{{}}}".format(place), tokens) for place, tokens in reduced_marking.items()) + ')'
         
         if args.show_projected_marking:
             print("# Projected marking:", formula, file=sys.stderr)
