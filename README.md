@@ -158,9 +158,10 @@ The code repository includes a reproducible performance evaluation in the `bench
 
 ## References
 
-+ Amat, N., Chauvet, L. (2022). Kong: A Tool to Squash Concurrent Places. In: Bernardinello, L., Petrucci, L. (eds) Application and Theory of Petri Nets and Concurrency. PETRI NETS 2022. Lecture Notes in Computer Science, vol 13288. Springer, Cham. https://doi.org/10.1007/978-3-031-06653-5_6
-
-+ Amat, N., Dal Zilio, S., Le Botlan, D. (2021). Accelerating the Computation of Dead and Concurrent Places Using Reductions. In: Laarman, A., Sokolova, A. (eds) Model Checking Software. SPIN 2021. Lecture Notes in Computer Science(), vol 12864. Springer, Cham. https://doi.org/10.1007/978-3-030-84629-9_3
++ Amat, N, Bouvier, P, Garavel, H. [A Toolchain to Compute Concurrent Places of Petri Nets](https://www.springer.com/gp/computer-science/lncs/lncs-transactions/petri-nets-and-other-models-of-concurrency-topnoc-/731240). *Petri Nets and Other Models of Concurrency (ToPNoC), To appear.*
++ Amat, N, Dal Zilio, S, Le Botlan, D. [Leveraging polyhedral reductions for solving Petri net reachability problems](https://doi.org/10.1007/s10009-022-00694-8). *International Journal on Software Tools for Technology Transfer (STTT)*. 2023.
++ Amat, N, Chauvet, L. [Kong: A Tool to Squash Concurrent Places](https://doi.org/10.1007/978-3-031-06653-5_6). *Application and Theory of Petri Nets and Concurrency (Petri Nets)*. 2022.
++ Amat, N, Dal Zilio, S, Le Botlan, D. [Accelerating the Computation of Dead and Concurrent Places Using Reductions](https://doi.org/10.1007/978-3-030-84629-9_3). *Model Checking Software (SPIN)*. 2021.
 
 ## Dependencies
 
